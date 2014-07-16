@@ -64,7 +64,7 @@
         CGPoint touchLocation = [recognizer locationInView:recognizer.view];
         touchLocation = [self convertPointFromView:touchLocation];
         
-        if ((touchLocation.x >= 0 && touchLocation.x <= 100) && (touchLocation.y >= 0 && touchLocation.y <= 30)) {
+        if ((touchLocation.x >= 0 && touchLocation.x <= 100) && (touchLocation.y >= 0 && touchLocation.y <= 50)) {
             [self help];
         } else {
             [self startGame];
@@ -80,7 +80,8 @@
     [self.view presentScene:helpScene transition:slideUp];
 }
 
-- (void) startGame {
+- (void) startGame {    
+    
     SKScene *barScene = [[BarScene alloc]initWithSize:self.size];
     
     SKTransition *doorway = [SKTransition doorwayWithDuration:1];

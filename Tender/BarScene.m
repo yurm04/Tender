@@ -12,15 +12,54 @@
 
 @interface BarScene()
 
+// Private Properties
+
+// Timer Properties
+@property (nonatomic) BOOL startFlag;
+@property (nonatomic) BOOL unpause;
+@property (nonatomic) BOOL isPaused;
+@property (nonatomic) NSTimeInterval startTime;
+@property (nonatomic) NSTimeInterval pausedTime;
+@property (nonatomic) NSTimeInterval startPause;
+@property (nonatomic) NSTimeInterval pauseStart;
+@property (nonatomic) NSTimeInterval pauseEnd;
+@property (nonatomic) NSTimeInterval runningTime;
+@property (nonatomic) NSTimeInterval gameTime;
+
+// Game Properties
+@property (nonatomic) BOOL gameOver;
+@property (nonatomic) BOOL activeOrder;
+@property (nonatomic) BOOL drinkInScene;
+@property (nonatomic, getter = isInMotion) BOOL inMotion;
+
+@property (nonatomic) CGFloat activeOrderPosition;
+@property (nonatomic) CGFloat randomXPosition;
+@property (nonatomic) NSInteger activeOrderItem;
+@property (strong, nonatomic) NSMutableArray* strikes;                                        // Number of Lives
+@property (strong, nonatomic) NSMutableString *activeOrderItemName;
+@property (strong, nonatomic) NSMutableString *tappedItemName;
+
+// Private Methods
+- (CGFloat) newRandomPosition;
+- (void) createBarItems;
+- (void) randomOrder;
+
+- (void) removeDrink;
+- (void) checkVelocity;
+- (void) toggleInMotion;
+- (void) removeRandomOrder;
+- (void) checkPosition: (CGFloat)position;
+- (void)slideNodeWithXVelocity:(CGFloat)xVelocity;
+
+- (void) newDrinkWithItem: (NSString *) item;
+- (void) updateGameScoreWithPoints: (NSInteger)points;
+- (void) displayPointsEarnedWithPoints: (NSInteger) points;
+
+- (void) endGame;
+
 @end
 
 @implementation BarScene
-
-{
-    NSInteger gameScore;
-    NSInteger orderCount;
-    
-}
 
 const CGFloat VELOCITY_SCALE = 15000;
 const CGFloat BAR_ITEM_SCALE = 0.70;
@@ -57,7 +96,6 @@ const NSInteger STRIKES_NUM = 4;
 ////////////////////
 // INITIALIZATION //
 ////////////////////
-
 #pragma mark - INITIALIZATION
 
 - (id) initWithSize:(CGSize)size
@@ -66,16 +104,15 @@ const NSInteger STRIKES_NUM = 4;
         self.backgroundColor = [SKColor whiteColor];
         
         // Initialize score with zero
-        gameScore = 0;
-        self.inMotion = NO;
-        self.drinkInScene = NO;
-        self.activeOrder = NO;
+        _gameScore = 0;
+        _inMotion = NO;
+        _drinkInScene = NO;
+        _activeOrder = NO;
         
         // Timer flag
-        self.startFlag = YES;
-        self.lastUpdate = 0;
-        self.pausedTime = 0;
-        self.gameTime = 120;
+        _startFlag = YES;
+        _pausedTime = 0;
+        _gameTime = 120;
         
         // Configuring physics world with no gravity
         self.physicsWorld.gravity = CGVectorMake(0, 0);
@@ -168,10 +205,11 @@ const NSInteger STRIKES_NUM = 4;
 - (CGFloat) newRandomPosition
 {
     _randomXPosition = (CGFloat)((arc4random() % (int)self.size.width) + RANDOM_BASE_POSITION);
+    
     if (_randomXPosition > 500) {
-        _randomXPosition = 500;
+        _randomXPosition = [self newRandomPosition];
     }
-    NSLog(@"%f", _randomXPosition);
+    
     return _randomXPosition;
 }
 
@@ -185,7 +223,6 @@ const NSInteger STRIKES_NUM = 4;
 ////////////////////
 // SCENE CONTENTS //
 ////////////////////
-
 #pragma mark - SCENE CONTENTS
 
 - (void) newDrinkWithItem: (NSString *) item
@@ -362,6 +399,11 @@ const NSInteger STRIKES_NUM = 4;
     }
 }
 
+//////////////////
+// UPDATE SCENE //
+//////////////////
+#pragma mark - UPDATE SCENE
+
 - (void)update:(NSTimeInterval)currentTime
 {
     // Change pause label
@@ -472,18 +514,18 @@ const NSInteger STRIKES_NUM = 4;
     }
 }
 
+
+///////////////////////////
+// VELOCITY AND POSITION //
+///////////////////////////
+#pragma mark - VELOCITY AND POSITION
+
 - (void)slideNodeWithXVelocity:(CGFloat)xVelocity
 {
     CGFloat slideVelocity = (xVelocity * 5);
     [[self childNodeWithName:@"drink"].physicsBody applyForce:CGVectorMake(slideVelocity, 0)];
     [self performSelector:@selector(toggleInMotion) withObject:self afterDelay:0.1];
 }
-
-///////////////////////////
-// VELOCITY AND POSITION //
-///////////////////////////
-
-#pragma mark - VELOCITY AND POSITION
 
 -(void) checkVelocity
 {
@@ -555,8 +597,6 @@ const NSInteger STRIKES_NUM = 4;
     }
     
     if (self.strikes.count == 0) {
-//        GameOverScene *gameOverScene = [[GameOverScene alloc]initWithSize:self.size Score:gameScore];
-//        [self.view presentScene:gameOverScene transition:[SKTransition doorsCloseVerticalWithDuration:2.0]];
         [self endGame];
     }
 
@@ -569,10 +609,10 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) updateGameScoreWithPoints: (NSInteger)points
 {
-    gameScore += points;
-    self.scoreLabel.text = [NSString stringWithFormat:@"$%ld",(long)gameScore];
+    self.gameScore += points;
+    self.scoreLabel.text = [NSString stringWithFormat:@"$%ld",(long)self.gameScore];
     
-    if (gameScore > 0) {
+    if (self.gameScore > 0) {
         self.scoreLabel.fontColor = [SKColor greenColor];
     }
     else{
@@ -634,7 +674,7 @@ const NSInteger STRIKES_NUM = 4;
 #pragma mark - GAME OVER
 
 - (void) endGame {
-    GameOverScene *gameOverScene = [[GameOverScene alloc]initWithSize:self.size Score:gameScore];
+    GameOverScene *gameOverScene = [[GameOverScene alloc]initWithSize:self.size Score:self.gameScore];
     [self.view presentScene:gameOverScene transition:[SKTransition doorsCloseVerticalWithDuration:2.0]];
 
 }
