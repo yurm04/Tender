@@ -29,14 +29,11 @@
 // Game Properties
 @property (nonatomic) BOOL gameOver;
 @property (nonatomic) BOOL activeOrder;
-@property (nonatomic) BOOL drinkInScene;
-@property (nonatomic, getter = isInMotion) BOOL inMotion;
+@property (nonatomic) BOOL drinkInQue;
 
-@property (nonatomic) CGFloat activeOrderPosition;
 @property (nonatomic) CGFloat randomXPosition;
-@property (nonatomic) NSInteger activeOrderItem;
-@property (strong, nonatomic) NSMutableArray* strikes;                                        // Number of Lives
-@property (strong, nonatomic) NSMutableString *activeOrderItemName;
+@property (strong, nonatomic) NSMutableArray *strikes;                                        // Number of Lives
+@property (strong, nonatomic) NSMutableArray *drinksInScene;
 @property (strong, nonatomic) NSMutableString *tappedItemName;
 
 // Private Methods
@@ -44,22 +41,21 @@
 - (void) createBarItems;
 - (void) randomOrder;
 
-- (void) removeDrink;
 - (void) checkVelocity;
-- (void) toggleInMotion;
-- (void) removeRandomOrder;
-- (void) checkPosition: (CGFloat)position;
-- (void)slideNodeWithXVelocity:(CGFloat)xVelocity;
+- (void) checkForMatchWithDrink:(DrinkNode *)drink;
+- (void)slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity;
+- (void) removeActiveOrder: (Order *)order Drink: (DrinkNode *)drink;
 
-- (void) newDrinkWithItem: (NSString *) item;
 - (void) updateGameScoreWithPoints: (NSInteger)points;
-- (void) displayPointsEarnedWithPoints: (NSInteger) points;
+- (void) displayPointsEarnedForDrink: (DrinkNode *)drink WithPoints:(NSInteger)points;
 
 - (void) endGame;
 
 @end
 
 @implementation BarScene
+
+// CONSTANT VALUES
 
 const CGFloat VELOCITY_SCALE = 15000;
 const CGFloat BAR_ITEM_SCALE = 0.70;
@@ -105,8 +101,7 @@ const NSInteger STRIKES_NUM = 4;
         
         // Initialize score with zero
         _gameScore = 0;
-        _inMotion = NO;
-        _drinkInScene = NO;
+        _drinkInQue = NO;
         _activeOrder = NO;
         
         // Timer flag
@@ -122,14 +117,19 @@ const NSInteger STRIKES_NUM = 4;
     return self;
 }
 
-
+- (NSMutableArray *) drinksInScene {
+    if (!_drinksInScene) {
+        _drinksInScene = [NSMutableArray array];
+    }
+    return _drinksInScene;
+}
 - (void) createSceneContents
 {
     self.backgroundColor = [SKColor blackColor];
     self.physicsBody = [SKPhysicsBody bodyWithEdgeLoopFromRect:self.frame];
     
     // Setting up background sprite
-    SKSpriteNode *background = [[SKSpriteNode alloc]initWithImageNamed:@"background.png"];
+    SKSpriteNode *background = [SKSpriteNode spriteNodeWithImageNamed:@"background.png"];
     background.userInteractionEnabled = NO;
     background.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) + BACKGROUND_OFFSET);
     
@@ -137,14 +137,14 @@ const NSInteger STRIKES_NUM = 4;
     [background setScale:SCENE_SCALE];
     
     
-    SKSpriteNode *bar = [[SKSpriteNode alloc]initWithImageNamed:@"bar.png"];
+    SKSpriteNode *bar = [SKSpriteNode spriteNodeWithImageNamed:@"bar.png"];
     bar.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) - BAR_OFFSET);
     bar.physicsBody = [[SKPhysicsBody alloc]init];
     bar.physicsBody.friction = 0.36;
     bar.userInteractionEnabled = NO;
     [bar setScale:SCENE_SCALE];
     
-    SKSpriteNode *crowd = [[SKSpriteNode alloc]initWithImageNamed:@"crowd.png"];
+    SKSpriteNode *crowd = [SKSpriteNode spriteNodeWithImageNamed:@"crowd.png"];
     crowd.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) - 30);
     crowd.userInteractionEnabled = NO;
     [crowd setScale:0.50];
@@ -214,43 +214,26 @@ const NSInteger STRIKES_NUM = 4;
 }
 
 
-
-- (void) toggleInMotion
-{
-    self.inMotion = !self.isInMotion;
-}
-
 ////////////////////
 // SCENE CONTENTS //
 ////////////////////
 #pragma mark - SCENE CONTENTS
 
-- (void) newDrinkWithItem: (NSString *) item
-{
-    NSString *imageName = [NSString stringWithFormat:@"%@.png",item];
-    SKSpriteNode *drink = [[SKSpriteNode alloc]initWithImageNamed:imageName];
-    
-    
+- (void) addDrinkWithName:(NSString *)name {
+    DrinkNode *drink = [[DrinkNode alloc]initWithImageNamed:name];
     drink.position = CGPointMake(DRINK_X, DRINK_Y);
-    drink.name = @"drink";
-    [drink setScale:SCENE_SCALE];
+    drink.inQueue = YES;
+    self.drinkInQue = YES;
     
-    // Adding PhysicsBody to sprite
-    drink.physicsBody = [[SKPhysicsBody alloc]init];
-    drink.physicsBody.linearDamping = 1.0;
-    drink.physicsBody.dynamic = YES;
-    drink.physicsBody.mass = 10;             // Edges only collide with volume based bodies
+    if ([drink isKindOfClass:[DrinkNode class]]) {
+        NSLog(@"%@", drink.inQueue ? @"in queue" : @"not");
+        [self.drinksInScene addObject:drink];
+        NSLog(@"%@", self.drinksInScene);
+
+    }
     
     [self addChild:drink];
-    self.drinkInScene = YES;
 }
-
-- (void) removeDrink
-{
-    [[self childNodeWithName:@"drink"] removeFromParent];
-    self.drinkInScene = NO;
-}
-
 
 - (void) addScoreLabel
 {
@@ -267,42 +250,16 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) randomOrder
 {
-    CGFloat position = [self newRandomPosition];
+    CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
     NSInteger randNum = arc4random() % 4;
     
-    self.activeOrderItem = randNum;
-    self.activeOrderPosition = position;
-    self.activeOrder = YES;
-            SKSpriteNode *bubble = [[SKSpriteNode alloc]initWithImageNamed:@"bubble.png"];
-    [bubble setScale:SCENE_SCALE];
-    bubble.userInteractionEnabled = NO;
-    SKSpriteNode *randItem = [[SKSpriteNode alloc]initWithImageNamed:[NSString stringWithFormat:@"item%ld", (long)randNum]];
-    self.activeOrderItemName = [NSMutableString stringWithString:[NSString stringWithFormat:@"item%ld", (long)randNum]];
-    randItem.userInteractionEnabled = NO;
-    [randItem setScale:BUBBLE_ITEM_SCALE];
-    bubble.name = @"bubble";
+    SKSpriteNode *order = (SKSpriteNode *)[[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"item%ld", (long)randNum]];
+    order.position = position;
     
-    [self addChild:bubble];
-    [self addChild:randItem];
-    randItem.name = @"item";
-    bubble.position = CGPointMake(position, BUBBLE_Y);
-    randItem.position = bubble.position;
+    [self.activeOrders addObject:order];
+    [self addChild:order];
     
-    bubble.alpha = 0.0;
-    randItem.alpha = 0.0;
     
-    SKAction *fadeIn = [SKAction fadeAlphaTo:1.0 duration:0.5];
-    
-    [[self childNodeWithName:@"bubble"] runAction:fadeIn];
-    [[self childNodeWithName:@"item"] runAction:fadeIn];
-    
-}
-
-- (void) removeRandomOrder
-{
-    [[self childNodeWithName:@"bubble"] removeFromParent];
-    [[self childNodeWithName:@"item"] removeFromParent];
-    self.activeOrder = NO;
 }
 
 - (void) createBarItems
@@ -353,29 +310,31 @@ const NSInteger STRIKES_NUM = 4;
 - (void) handlePan: (UIPanGestureRecognizer*)recognizer
 {
     
-    if (recognizer.state == UIGestureRecognizerStateEnded &&
-        [self childNodeWithName:@"drink"] != nil &&
-        self.isInMotion != YES)
+    if (recognizer.state == UIGestureRecognizerStateEnded && self.drinkInQue)
     {
         // Adding gesture recognizer to node at touch point
         CGPoint touchLocation = [recognizer locationInView:recognizer.view];
         touchLocation = [self convertPointFromView:touchLocation];
         
-        CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
-        if (touchLocation.x < [self childNodeWithName:@"drink"].position.x) {
+        NSLog(@"%@", self.drinksInScene);
+        
+        for (DrinkNode *drink in self.drinksInScene) {
+            NSLog(@"%@", (drink.inQueue ? @"In Queue" : @"Not"));
+            if (drink.isInQueue) {
+                CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
+                [self slideDrink:drink WithXVelocity:recognizerVelocity];
+                drink.inMotion = YES;
+            }
         }
-        else{
-            [self slideNodeWithXVelocity:recognizerVelocity];
-        }
-
+        self.drinkInQue = NO;
     }
-    
+
 }
 
 - (void) handleTap: (UITapGestureRecognizer *)recognizer
 {
     if (recognizer.state == UIGestureRecognizerStateEnded &&
-        self.drinkInScene == NO && self.scene.view.paused != YES)
+        self.scene.view.paused != YES)
     {
         // Adding gesture recognizer to node at touch point
         CGPoint touchLocation = [recognizer locationInView:recognizer.view];
@@ -386,12 +345,13 @@ const NSInteger STRIKES_NUM = 4;
         } else if ((touchLocation.x >= 440 && touchLocation.x <= 460 ) && (touchLocation.y >= 280 && touchLocation.y <= 320)) {
             [self pauseGame];
         } else {
-            SKSpriteNode *touchedNode = (SKSpriteNode *)[self nodeAtPoint:touchLocation];
-            
-            if (touchedNode.userInteractionEnabled == YES) {
-                [self newDrinkWithItem:touchedNode.name];
-                self.tappedItemName = [NSMutableString stringWithString:touchedNode.name];
+            if (self.drinkInQue == NO) {
+                SKSpriteNode *touchedNode = (SKSpriteNode *)[self nodeAtPoint:touchLocation];
+                if (touchedNode.userInteractionEnabled == YES) {
+                    [self addDrinkWithName:touchedNode.name];
+                }
             }
+            
         }
         
     } else if (self.scene.view.paused == YES) {
@@ -414,12 +374,13 @@ const NSInteger STRIKES_NUM = 4;
     }
     
     // Call if isInMotion is true
-    if (self.isInMotion) {
-        [self checkPosition:self.randomXPosition];
+    if (self.drinksInScene.count != 0) {
+        [self checkVelocity];
     }
+    
     if ([self childNodeWithName:@"drink"].position.x > self.size.width) {
         SKAction *glassBreakSound = [SKAction playSoundFileNamed:@"glassBreaking.wav" waitForCompletion:NO];
-        [self removeDrink];
+        [[self nodeAtPoint:CGPointMake(CGRectGetMaxX(self.view.frame), DRINK_Y)] removeFromParent];
         [self runAction:glassBreakSound];
         [self removeStrike];
     }
@@ -520,86 +481,87 @@ const NSInteger STRIKES_NUM = 4;
 ///////////////////////////
 #pragma mark - VELOCITY AND POSITION
 
-- (void)slideNodeWithXVelocity:(CGFloat)xVelocity
+- (void)slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity
 {
+    drink.inQueue = NO;
     CGFloat slideVelocity = (xVelocity * 5);
-    [[self childNodeWithName:@"drink"].physicsBody applyForce:CGVectorMake(slideVelocity, 0)];
-    [self performSelector:@selector(toggleInMotion) withObject:self afterDelay:0.1];
+    [drink.physicsBody applyForce:CGVectorMake(slideVelocity, 0)];
 }
 
 -(void) checkVelocity
 {
-    SKSpriteNode *movingSprite = (SKSpriteNode *)[self childNodeWithName:@"drink"];
-    CGFloat spriteVelocity = movingSprite.physicsBody.velocity.dx;
+
+    for (SKNode *sprite in [self children]) {
+        if ([sprite.name isEqualToString:@"drink"]) {
+            DrinkNode *drink = (DrinkNode *) sprite;
+            NSLog(@"velocity:%f",drink.physicsBody.velocity.dx);
+            if (drink.isInMotion && drink.physicsBody.velocity.dx < MIN_VELOCITY) {
+                [self checkForMatchWithDrink:drink];
+            }
+        }
+    }
     
-    if (spriteVelocity < MIN_VELOCITY) {
-        [self checkPosition:self.randomXPosition];
-        self.inMotion = NO;
-    }
 }
 
-- (BOOL) checkMatchingOrder
+-(void)checkForMatchWithDrink:(DrinkNode *)drink
 {
-    if ([self.activeOrderItemName isEqualToString:self.tappedItemName]) {
-        return YES;
-    }else{
-        return NO;
-    }
-}
-
--(void)checkPosition:(CGFloat)position
-{
-    SKSpriteNode *sprite = (SKSpriteNode *)[self childNodeWithName:@"drink"];
     NSInteger earnedPoints = 0;
     
-    SKAction *fadeOut = [SKAction fadeOutWithDuration:1];
-    
-    // if sprite is within x of the designated position:
-    if ([self childNodeWithName:@"drink"].physicsBody.velocity.dx < 1 && self.isInMotion) {
-
-            if ((sprite.position.x >= (self.activeOrderPosition - TIER_1_POSITION)) &&
-                (sprite.position.x <= self.activeOrderPosition + TIER_1_POSITION)) {
+    for (Order *order in self.activeOrders) {
+        if ([order.item isEqualToString:drink.item]) {
+            if ((drink.position.x >= (order.position.x - TIER_1_POSITION)) &&
+                (drink.position.x <= order.position.x + TIER_1_POSITION)) {
                 
-                if ([self checkMatchingOrder]) {
                     earnedPoints++;
                     
-                    if ((sprite.position.x >= self.activeOrderPosition - TIER_2_POSITION) &&
-                        (sprite.position.x <= self.activeOrderPosition + TIER_2_POSITION)) {
+                    if ((drink.position.x >= order.position.x - TIER_2_POSITION) &&
+                        (drink.position.x <= order.position.x + TIER_2_POSITION)) {
                         earnedPoints += 4;
                         
-                        if ((sprite.position.x >= self.activeOrderPosition - TIER_3_POSITION) &&
-                            (sprite.position.x <= self.activeOrderPosition + TIER_3_POSITION)) {
+                        if ((drink.position.x >= order.position.x - TIER_3_POSITION) &&
+                            (drink.position.x <= order.position.x + TIER_3_POSITION)) {
                             earnedPoints += 5;
                         }
                     }
-                }
+            }
         } else {
             earnedPoints = 0;
             [self removeStrike];
-
         }
-
-        [self updateGameScoreWithPoints:earnedPoints];
-        [self displayPointsEarnedWithPoints:earnedPoints];
-        self.InMotion = NO;
         
-        [[self childNodeWithName:@"drink"] runAction:fadeOut completion:^(void){
-            [self removeDrink];
-            
-        }];
-        [[self childNodeWithName:@"bubble"] runAction:fadeOut];
-        [[self childNodeWithName:@"item"] runAction:fadeOut completion:^(void){
-                [self removeRandomOrder];
-        }];
-            
-        [self performSelector:@selector(randomOrder) withObject:self afterDelay:2.0];
-   
+        [self removeActiveOrder:order Drink:drink];
     }
+    
+    [self updateGameScoreWithPoints:earnedPoints];
+    [self displayPointsEarnedForDrink:drink WithPoints:earnedPoints];
     
     if (self.strikes.count == 0) {
         [self endGame];
     }
 
+}
+
+- (void) removeActiveOrder: (Order *)order Drink: (DrinkNode *)drink{
+    
+    SKAction *fadeOut = [SKAction fadeOutWithDuration:1];
+    SKAction *fadeBlock = [SKAction runBlock:^{
+        [order runAction:fadeOut];
+    }];
+    SKAction *delay = [SKAction waitForDuration:2.0];
+    SKAction *newOrder = [SKAction runBlock:^{
+        [self newRandomPosition];
+    }];
+    SKAction *sequence = [SKAction sequence:@[fadeBlock, delay, newOrder]];
+    
+    [self runAction:sequence];
+    
+    [drink runAction:fadeOut completion:^(void){
+        [drink removeFromParent];
+        [self.drinksInScene removeObject:drink];
+    }];
+    
+    [self performSelector:@selector(randomOrder) withObject:self afterDelay:2.0];
+    
 }
 
 //////////////////////
@@ -621,15 +583,14 @@ const NSInteger STRIKES_NUM = 4;
 }
 
 
-- (void) displayPointsEarnedWithPoints:(NSInteger)points
+- (void) displayPointsEarnedForDrink: (DrinkNode *)drink WithPoints:(NSInteger)points
 {
-    SKSpriteNode *sprite = (SKSpriteNode *)[self childNodeWithName:@"drink"];
     SKLabelNode *pointsLabel = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
     
     // Absolute value of points labs()
     pointsLabel.text = [NSString stringWithFormat:@"$%ld",labs((long)points)];
     pointsLabel.fontSize = 15;
-    pointsLabel.position = CGPointMake(sprite.position.x, sprite.position.y + 30);
+    pointsLabel.position = CGPointMake(drink.position.x, drink.position.y + 30);
     pointsLabel.name = @"pointsLabel";
     
     // setting font color based on negative/positive points
