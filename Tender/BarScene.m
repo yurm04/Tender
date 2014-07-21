@@ -70,7 +70,7 @@ const CGFloat DRINK_X = 50;
 const CGFloat DRINK_Y = 110;
 const CGFloat ANCHOR_X = 0.5;
 const CGFloat ANCHOR_Y = 0.0;
-const CGFloat BAR_BASE_Y = 50;
+const CGFloat BAR_BASE_Y = 15;
 const CGFloat BAR_BASE_X = 75;
 const CGFloat BUBBLE_Y = 260;
 
@@ -260,6 +260,7 @@ const NSInteger STRIKES_NUM = 4;
         NSString *name = [NSString stringWithFormat:@"%ld", (long)i];
         SKSpriteNode *item = [[SKSpriteNode alloc]initWithImageNamed:[NSString stringWithFormat:@"barItem%@.png", name]];
         item.name = name;
+        item.anchorPoint = CGPointMake(ANCHOR_X, ANCHOR_Y);
         item.userInteractionEnabled = YES;
         [item setScale:BAR_ITEM_SCALE];
     
