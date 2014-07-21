@@ -68,6 +68,8 @@ const CGFloat MIN_VELOCITY = 1;
 
 const CGFloat DRINK_X = 50;
 const CGFloat DRINK_Y = 140;
+const CGFloat ANCHOR_X = 0.5;
+const CGFloat ANCHOR_Y = 0.0;
 const CGFloat BAR_BASE_Y = 50;
 const CGFloat BAR_BASE_X = 75;
 const CGFloat BUBBLE_Y = 260;
@@ -133,21 +135,11 @@ const NSInteger STRIKES_NUM = 4;
     background.userInteractionEnabled = NO;
     background.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) + BACKGROUND_OFFSET);
     
-    // Scaling to fit
-    [background setScale:SCENE_SCALE];
-    
-    
     SKSpriteNode *bar = [SKSpriteNode spriteNodeWithImageNamed:@"bar.png"];
     bar.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) - BAR_OFFSET);
     bar.physicsBody = [[SKPhysicsBody alloc]init];
     bar.physicsBody.friction = 0.36;
     bar.userInteractionEnabled = NO;
-    [bar setScale:SCENE_SCALE];
-    
-    SKSpriteNode *crowd = [SKSpriteNode spriteNodeWithImageNamed:@"crowd.png"];
-    crowd.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) - 30);
-    crowd.userInteractionEnabled = NO;
-    [crowd setScale:0.50];
     
     // Countdown Timer
     self.timer = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
@@ -168,7 +160,6 @@ const NSInteger STRIKES_NUM = 4;
     quitNode.name = @"quitNode";
     
     [self addChild:background];
-    [self addChild:crowd];
     [self addChild:bar];
     [self createBarItems];
     [self randomOrder];
@@ -222,6 +213,7 @@ const NSInteger STRIKES_NUM = 4;
 - (void) addDrinkWithName:(NSString *)name {
     DrinkNode *drink = [[DrinkNode alloc]initWithImageNamed:name];
     drink.position = CGPointMake(DRINK_X, DRINK_Y);
+    drink.anchorPoint = CGPointMake(0.5, 0.0);
     drink.inQueue = YES;
     self.drinkInQue = YES;
     
@@ -253,7 +245,7 @@ const NSInteger STRIKES_NUM = 4;
     CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
     NSInteger randNum = arc4random() % 4;
     
-    SKSpriteNode *order = (SKSpriteNode *)[[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"item%ld", (long)randNum]];
+    SKSpriteNode *order = (SKSpriteNode *)[[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum]];
     order.position = position;
     
     [self.activeOrders addObject:order];
@@ -265,8 +257,8 @@ const NSInteger STRIKES_NUM = 4;
 - (void) createBarItems
 {
     for (NSInteger i = 0; i <= ITEMS_COUNT; i++) {
-        NSString *name = [NSString stringWithFormat:@"item%ld", (long)i];
-        SKSpriteNode *item = [[SKSpriteNode alloc]initWithImageNamed:[NSString stringWithFormat:@"%@.png", name]];
+        NSString *name = [NSString stringWithFormat:@"%ld", (long)i];
+        SKSpriteNode *item = [[SKSpriteNode alloc]initWithImageNamed:[NSString stringWithFormat:@"barItem%@.png", name]];
         item.name = name;
         item.userInteractionEnabled = YES;
         [item setScale:BAR_ITEM_SCALE];
@@ -287,7 +279,7 @@ const NSInteger STRIKES_NUM = 4;
 - (void) addStrikes
 {
     for (NSInteger i = 0; self.strikes.count <= STRIKES_NUM; i++) {
-        [self.strikes addObject:[[SKSpriteNode alloc]initWithImageNamed:@"item4.png"]];
+        [self.strikes addObject:[[SKSpriteNode alloc]initWithImageNamed:@"item0.png"]];
         SKSpriteNode *strike = (SKSpriteNode *)self.strikes[i];
         strike.position = CGPointMake(125 + (i*20), 305);
         [strike setScale:STRIKE_SCALE];
@@ -348,7 +340,7 @@ const NSInteger STRIKES_NUM = 4;
             if (self.drinkInQue == NO) {
                 SKSpriteNode *touchedNode = (SKSpriteNode *)[self nodeAtPoint:touchLocation];
                 if (touchedNode.userInteractionEnabled == YES) {
-                    [self addDrinkWithName:touchedNode.name];
+                    [self addDrinkWithName:[NSString stringWithFormat:@"item%@",touchedNode.name]];
                 }
             }
             
