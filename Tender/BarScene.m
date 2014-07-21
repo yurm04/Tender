@@ -67,7 +67,7 @@ const CGFloat BUBBLE_ITEM_SCALE = 0.30;
 const CGFloat MIN_VELOCITY = 1;
 
 const CGFloat DRINK_X = 50;
-const CGFloat DRINK_Y = 140;
+const CGFloat DRINK_Y = 110;
 const CGFloat ANCHOR_X = 0.5;
 const CGFloat ANCHOR_Y = 0.0;
 const CGFloat BAR_BASE_Y = 50;
