@@ -70,7 +70,7 @@ const CGFloat DRINK_X = 50;
 const CGFloat DRINK_Y = 110;
 const CGFloat ANCHOR_X = 0.5;
 const CGFloat ANCHOR_Y = 0.0;
-const CGFloat BAR_BASE_Y = 15;
+const CGFloat BAR_BASE_Y = 12;
 const CGFloat BAR_BASE_X = 75;
 const CGFloat BUBBLE_Y = 260;
 
@@ -133,7 +133,7 @@ const NSInteger STRIKES_NUM = 4;
     // Setting up background sprite
     SKSpriteNode *background = [SKSpriteNode spriteNodeWithImageNamed:@"background.png"];
     background.userInteractionEnabled = NO;
-    background.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) + BACKGROUND_OFFSET);
+    background.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame));
     
     SKSpriteNode *bar = [SKSpriteNode spriteNodeWithImageNamed:@"bar.png"];
     bar.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) - BAR_OFFSET);
@@ -262,7 +262,6 @@ const NSInteger STRIKES_NUM = 4;
         item.name = name;
         item.anchorPoint = CGPointMake(ANCHOR_X, ANCHOR_Y);
         item.userInteractionEnabled = YES;
-        [item setScale:BAR_ITEM_SCALE];
     
         if (i == 0) {
             item.position = CGPointMake(BAR_BASE_X, BAR_BASE_Y);
@@ -303,25 +302,30 @@ const NSInteger STRIKES_NUM = 4;
 - (void) handlePan: (UIPanGestureRecognizer*)recognizer
 {
     
-    if (recognizer.state == UIGestureRecognizerStateEnded && self.drinkInQue)
-    {
-        // Adding gesture recognizer to node at touch point
-        CGPoint touchLocation = [recognizer locationInView:recognizer.view];
-        touchLocation = [self convertPointFromView:touchLocation];
-        
-        NSLog(@"%@", self.drinksInScene);
-        
-        for (DrinkNode *drink in self.drinksInScene) {
-            NSLog(@"%@", (drink.inQueue ? @"In Queue" : @"Not"));
-            if (drink.isInQueue) {
-                CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
-                [self slideDrink:drink WithXVelocity:recognizerVelocity];
-                drink.inMotion = YES;
-            }
-        }
-        self.drinkInQue = NO;
+    SKNode *touchedNode;
+    DrinkNode *drink;
+    
+    if (recognizer.state == UIGestureRecognizerStateBegan && self.drinkInQue) {
+        CGPoint beganLocation = [recognizer locationInView:recognizer.view];
+        beganLocation = [self convertPointFromView:beganLocation];
+        touchedNode = [self nodeAtPoint:beganLocation];
     }
-
+    
+    if ([touchedNode isKindOfClass:[DrinkNode class]]) {
+        drink = (DrinkNode *) touchedNode;
+    }
+    
+    if (drink.isInQueue) {
+        NSLog(@"drink in queue: %@", drink);
+        
+            CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
+            NSLog(@"recognizer velocity %f", recognizerVelocity);
+            [self slideDrink:drink WithXVelocity:recognizerVelocity];
+            drink.inMotion = YES;
+            
+            self.drinkInQue = NO;
+        
+    }
 }
 
 - (void) handleTap: (UITapGestureRecognizer *)recognizer
@@ -476,9 +480,11 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void)slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity
 {
-    drink.inQueue = NO;
+    NSLog(@"Sliding...");
     CGFloat slideVelocity = (xVelocity * 5);
-    [drink.physicsBody applyForce:CGVectorMake(slideVelocity, 0)];
+    NSLog(@"slide velocity: %f", slideVelocity);
+    [drink.physicsBody applyImpulse:CGVectorMake(slideVelocity, 0)];
+    drink.inQueue = NO;
 }
 
 -(void) checkVelocity
