@@ -25,25 +25,29 @@
 @property (nonatomic) NSTimeInterval pauseEnd;
 @property (nonatomic) NSTimeInterval runningTime;
 @property (nonatomic) NSTimeInterval gameTime;
+@property (nonatomic) NSTimeInterval lastAddedBubble;
+@property (nonatomic) NSTimeInterval deltaBubble;
 
 // Game Properties
 @property (nonatomic) BOOL gameOver;
-@property (nonatomic) BOOL activeOrder;
 @property (nonatomic) BOOL drinkInQue;
 
 @property (nonatomic) CGFloat randomXPosition;
 @property (strong, nonatomic) NSMutableArray *strikes;                                        // Number of Lives
 @property (strong, nonatomic) NSMutableArray *drinksInScene;
 @property (strong, nonatomic) NSMutableString *tappedItemName;
+@property (nonatomic) NSUInteger maxOrders;
+@property (nonatomic) NSTimeInterval delay;
 
 // Private Methods
 - (CGFloat) newRandomPosition;
 - (void) createBarItems;
+- (void) addNewOrder;
 - (void) randomOrder;
 
 - (void) checkVelocity;
 - (void) checkForMatchWithDrink:(DrinkNode *)drink;
-- (void)slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity;
+- (void) slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity;
 - (void) removeActiveOrder: (Order *)order Drink: (DrinkNode *)drink;
 
 - (void) updateGameScoreWithPoints: (NSInteger)points;
@@ -57,14 +61,13 @@
 
 // CONSTANT VALUES
 
-const CGFloat VELOCITY_SCALE = 15000;
 const CGFloat BAR_ITEM_SCALE = 0.70;
 const CGFloat SCENE_SCALE = 0.50;
 const CGFloat STRIKE_SCALE = 0.25;
 const CGFloat BUBBLE_ITEM_SCALE = 0.30;
 
 
-const CGFloat MIN_VELOCITY = 1;
+const CGFloat MIN_VELOCITY = 1.0;
 
 const CGFloat DRINK_X = 50;
 const CGFloat DRINK_Y = 110;
@@ -104,7 +107,7 @@ const NSInteger STRIKES_NUM = 4;
         // Initialize score with zero
         _gameScore = 0;
         _drinkInQue = NO;
-        _activeOrder = NO;
+        _maxOrders = 3;
         
         // Timer flag
         _startFlag = YES;
@@ -162,7 +165,6 @@ const NSInteger STRIKES_NUM = 4;
     [self addChild:background];
     [self addChild:bar];
     [self createBarItems];
-    [self randomOrder];
     [self addScoreLabel];
     [self addStrikes];
     
@@ -171,7 +173,14 @@ const NSInteger STRIKES_NUM = 4;
     [self addChild:quitNode];
     [self addChild:self.pauseButton];
     
-    
+    [self addNewOrder];
+}
+
+- (NSMutableArray *)activeOrders {
+    if (!_activeOrders) {
+        _activeOrders = [NSMutableArray array];
+    }
+    return _activeOrders;
 }
 
 - (void)didMoveToView:(SKView *)view
@@ -223,10 +232,7 @@ const NSInteger STRIKES_NUM = 4;
     self.drinkInQue = YES;
     
     if ([drink isKindOfClass:[DrinkNode class]]) {
-        NSLog(@"%@", drink.inQueue ? @"in queue" : @"not");
         [self.drinksInScene addObject:drink];
-        NSLog(@"%@", self.drinksInScene);
-
     }
     
     [self addChild:drink];
@@ -245,6 +251,17 @@ const NSInteger STRIKES_NUM = 4;
     [self addChild:self.scoreLabel];
 }
 
+- (void) addNewOrder {
+    if (self.activeOrders.count < self.maxOrders) {
+        SKAction *delay = [SKAction waitForDuration:self.delay];
+        SKAction *order = [SKAction runBlock:^{
+            [self randomOrder];
+        }];
+        SKAction *sequence = [SKAction sequence:@[delay, order]];
+        [self runAction:sequence];
+    }
+}
+
 - (void) randomOrder
 {
     CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
@@ -253,10 +270,11 @@ const NSInteger STRIKES_NUM = 4;
     SKSpriteNode *order = (SKSpriteNode *)[[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum]];
     order.position = position;
     
-    [self.activeOrders addObject:order];
+    if ([order isKindOfClass:[Order class]]) {
+        [self.activeOrders addObject:order];
+    }
+    
     [self addChild:order];
-    
-    
 }
 
 - (void) createBarItems
@@ -306,44 +324,12 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) handlePan: (UIPanGestureRecognizer*)recognizer
 {
-    
-//    SKNode *touchedNode;
-//    DrinkNode *drink;
-//    
-//    if (recognizer.state == UIGestureRecognizerStateBegan && self.drinkInQue) {
-//        CGPoint beganLocation = [recognizer locationInView:recognizer.view];
-//        beganLocation = [self convertPointFromView:beganLocation];
-//        touchedNode = [self nodeAtPoint:beganLocation];
-//    }
-//    
-//    if ([touchedNode isKindOfClass:[DrinkNode class]]) {
-//        drink = (DrinkNode *) touchedNode;
-//        NSLog(@"is in queue: %@", drink.inQueue ? @"Yes" : @"No");
-//
-//    }
-//    
-//    if (recognizer.state == UIGestureRecognizerStateEnded) {
-//        NSLog(@"recognizer state ended");
-//        NSLog(@"is in queue: %@", drink.inQueue ? @"Yes" : @"No");
-//
-//            CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
-//            NSLog(@"recognizer velocity %f", recognizerVelocity);
-//        
-//        if (drink.inQueue == YES) {
-//            [self slideDrink:drink WithXVelocity:recognizerVelocity];
-//            drink.inMotion = YES;
-//            
-//            self.drinkInQue = NO;
-//        }
-//    }
-    
     if (recognizer.state == UIGestureRecognizerStateEnded) {
         for (SKNode *sprite in [self children]){
             if ([sprite isKindOfClass:[DrinkNode class]]) {
                 DrinkNode *drink = (DrinkNode *) sprite;
                 if (drink.inQueue) {
                     CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
-                    NSLog(@"recognizer velocity %f", recognizerVelocity);
                     [self slideDrink:drink WithXVelocity:recognizerVelocity];
                 }
             }
@@ -503,11 +489,11 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void)slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity
 {
-    NSLog(@"Sliding...");
     CGFloat slideVelocity = (xVelocity * 5);
-    NSLog(@"slide velocity: %f", slideVelocity);
-    [drink.physicsBody applyForce:CGVectorMake(slideVelocity, 0)];
+    [drink.physicsBody applyForce: CGVectorMake(slideVelocity, 0)];
+    drink.inMotion = YES;
     drink.inQueue = NO;
+    self.drinkInQue = NO;
 }
 
 -(void) checkVelocity
@@ -515,34 +501,39 @@ const NSInteger STRIKES_NUM = 4;
     for (SKNode *sprite in [self children]) {
         if ([sprite isKindOfClass:[DrinkNode class]]) {
             DrinkNode *drink = (DrinkNode *) sprite;
-            if (drink.isInMotion && drink.physicsBody.velocity.dx < MIN_VELOCITY) {
+//            NSLog(@"drink queued %@", drink.inQueue ? @"Yes" : @"no");
+//            NSLog(@"drink in motion %@", drink.inMotion ? @"Yes" : @"no");
+//            NSLog(@"drink velocity: %f", drink.physicsBody.velocity.dx);
+            if (!drink.inQueue && drink.inMotion &&
+                drink.physicsBody.velocity.dx < MIN_VELOCITY)
+            {
                 [self checkForMatchWithDrink:drink];
             }
         }
-    }
-    
+    }    
 }
 
 -(void)checkForMatchWithDrink:(DrinkNode *)drink
 {
     NSInteger earnedPoints = 0;
-    
+//    NSLog(@"checking for match");
     for (Order *order in self.activeOrders) {
-        if ([order.item isEqualToString:drink.item]) {
-            if ((drink.position.x >= (order.position.x - TIER_1_POSITION)) &&
-                (drink.position.x <= order.position.x + TIER_1_POSITION)) {
+//        NSLog(@"order position: %f", order.position.x);
+//        NSLog(@"drink position: %f", drink.position.x);
+        if ((drink.position.x >= (order.position.x - TIER_1_POSITION)) &&
+            (drink.position.x <= order.position.x + TIER_1_POSITION)) {
+            if ([order.item isEqualToString:drink.item]) {
+                earnedPoints++;
                 
-                    earnedPoints++;
+                if ((drink.position.x >= order.position.x - TIER_2_POSITION) &&
+                    (drink.position.x <= order.position.x + TIER_2_POSITION)) {
+                    earnedPoints += 4;
                     
-                    if ((drink.position.x >= order.position.x - TIER_2_POSITION) &&
-                        (drink.position.x <= order.position.x + TIER_2_POSITION)) {
-                        earnedPoints += 4;
-                        
-                        if ((drink.position.x >= order.position.x - TIER_3_POSITION) &&
-                            (drink.position.x <= order.position.x + TIER_3_POSITION)) {
-                            earnedPoints += 5;
-                        }
+                    if ((drink.position.x >= order.position.x - TIER_3_POSITION) &&
+                        (drink.position.x <= order.position.x + TIER_3_POSITION)) {
+                        earnedPoints += 5;
                     }
+                }
             }
         } else {
             earnedPoints = 0;

@@ -12,6 +12,8 @@
 
 @property (strong, nonatomic) NSString *item;
 @property (strong, nonatomic) SKSpriteNode *drink;
+@property (nonatomic) NSTimeInterval startTime;
+@property (nonatomic) NSTimeInterval lifeTime;
 
 -(instancetype)initWithItemNamed:(NSString *)name;
 
