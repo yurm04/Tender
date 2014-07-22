@@ -11,7 +11,7 @@
 @interface DrinkNode : SKSpriteNode
 
 @property (nonatomic, getter = isInMotion) BOOL inMotion;
-@property (nonatomic, getter = isInQueue) BOOL inQueue;
+@property (nonatomic) BOOL inQueue;
 @property (strong, nonatomic) NSString *item;
 
 -(instancetype) initWithItemNamed:(NSString *)item;

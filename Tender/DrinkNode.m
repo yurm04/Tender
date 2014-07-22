@@ -14,13 +14,14 @@
     self = [super init];
     
     if (self) {
-        self.name = @"drink";
         self.texture = [SKTexture textureWithImageNamed:item];
         _item = item;
         _inQueue = YES;
-        self.physicsBody = [[SKPhysicsBody alloc]init];
-        self.physicsBody.linearDamping = 1.0;
-        self.physicsBody.dynamic = YES;
+//        self.physicsBody = [[SKPhysicsBody alloc]init];
+//        self.physicsBody.linearDamping = 1.0;
+//        self.physicsBody.dynamic = YES;
+//        self.name = @"drink";
+
         
     }
     

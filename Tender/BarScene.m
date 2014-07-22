@@ -215,6 +215,11 @@ const NSInteger STRIKES_NUM = 4;
     drink.position = CGPointMake(DRINK_X, DRINK_Y);
     drink.anchorPoint = CGPointMake(0.5, 0.0);
     drink.inQueue = YES;
+    drink.physicsBody = [[SKPhysicsBody alloc]init];
+    drink.physicsBody.linearDamping = 1.0;
+    drink.physicsBody.dynamic = YES;
+    drink.name = @"drink";
+    
     self.drinkInQue = YES;
     
     if ([drink isKindOfClass:[DrinkNode class]]) {
@@ -302,29 +307,47 @@ const NSInteger STRIKES_NUM = 4;
 - (void) handlePan: (UIPanGestureRecognizer*)recognizer
 {
     
-    SKNode *touchedNode;
-    DrinkNode *drink;
+//    SKNode *touchedNode;
+//    DrinkNode *drink;
+//    
+//    if (recognizer.state == UIGestureRecognizerStateBegan && self.drinkInQue) {
+//        CGPoint beganLocation = [recognizer locationInView:recognizer.view];
+//        beganLocation = [self convertPointFromView:beganLocation];
+//        touchedNode = [self nodeAtPoint:beganLocation];
+//    }
+//    
+//    if ([touchedNode isKindOfClass:[DrinkNode class]]) {
+//        drink = (DrinkNode *) touchedNode;
+//        NSLog(@"is in queue: %@", drink.inQueue ? @"Yes" : @"No");
+//
+//    }
+//    
+//    if (recognizer.state == UIGestureRecognizerStateEnded) {
+//        NSLog(@"recognizer state ended");
+//        NSLog(@"is in queue: %@", drink.inQueue ? @"Yes" : @"No");
+//
+//            CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
+//            NSLog(@"recognizer velocity %f", recognizerVelocity);
+//        
+//        if (drink.inQueue == YES) {
+//            [self slideDrink:drink WithXVelocity:recognizerVelocity];
+//            drink.inMotion = YES;
+//            
+//            self.drinkInQue = NO;
+//        }
+//    }
     
-    if (recognizer.state == UIGestureRecognizerStateBegan && self.drinkInQue) {
-        CGPoint beganLocation = [recognizer locationInView:recognizer.view];
-        beganLocation = [self convertPointFromView:beganLocation];
-        touchedNode = [self nodeAtPoint:beganLocation];
-    }
-    
-    if ([touchedNode isKindOfClass:[DrinkNode class]]) {
-        drink = (DrinkNode *) touchedNode;
-    }
-    
-    if (drink.isInQueue) {
-        NSLog(@"drink in queue: %@", drink);
-        
-            CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
-            NSLog(@"recognizer velocity %f", recognizerVelocity);
-            [self slideDrink:drink WithXVelocity:recognizerVelocity];
-            drink.inMotion = YES;
-            
-            self.drinkInQue = NO;
-        
+    if (recognizer.state == UIGestureRecognizerStateEnded) {
+        for (SKNode *sprite in [self children]){
+            if ([sprite isKindOfClass:[DrinkNode class]]) {
+                DrinkNode *drink = (DrinkNode *) sprite;
+                if (drink.inQueue) {
+                    CGFloat recognizerVelocity = [recognizer velocityInView:self.view].x;
+                    NSLog(@"recognizer velocity %f", recognizerVelocity);
+                    [self slideDrink:drink WithXVelocity:recognizerVelocity];
+                }
+            }
+        }
     }
 }
 
@@ -483,17 +506,15 @@ const NSInteger STRIKES_NUM = 4;
     NSLog(@"Sliding...");
     CGFloat slideVelocity = (xVelocity * 5);
     NSLog(@"slide velocity: %f", slideVelocity);
-    [drink.physicsBody applyImpulse:CGVectorMake(slideVelocity, 0)];
+    [drink.physicsBody applyForce:CGVectorMake(slideVelocity, 0)];
     drink.inQueue = NO;
 }
 
 -(void) checkVelocity
 {
-
     for (SKNode *sprite in [self children]) {
-        if ([sprite.name isEqualToString:@"drink"]) {
+        if ([sprite isKindOfClass:[DrinkNode class]]) {
             DrinkNode *drink = (DrinkNode *) sprite;
-            NSLog(@"velocity:%f",drink.physicsBody.velocity.dx);
             if (drink.isInMotion && drink.physicsBody.velocity.dx < MIN_VELOCITY) {
                 [self checkForMatchWithDrink:drink];
             }
