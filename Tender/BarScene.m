@@ -46,6 +46,7 @@
 - (void) randomOrder;
 
 - (void) checkVelocity;
+- (void) toggleInMotionWithDrink: (DrinkNode *)drink;
 - (void) checkForMatchWithDrink:(DrinkNode *)drink;
 - (void) slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity;
 - (void) removeActiveOrder: (Order *)order Drink: (DrinkNode *)drink;
@@ -108,6 +109,7 @@ const NSInteger STRIKES_NUM = 4;
         _gameScore = 0;
         _drinkInQue = NO;
         _maxOrders = 3;
+        _delay = 2;
         
         // Timer flag
         _startFlag = YES;
@@ -173,7 +175,7 @@ const NSInteger STRIKES_NUM = 4;
     [self addChild:quitNode];
     [self addChild:self.pauseButton];
     
-    [self addNewOrder];
+    [self randomOrder];
 }
 
 - (NSMutableArray *)activeOrders {
@@ -252,7 +254,8 @@ const NSInteger STRIKES_NUM = 4;
 }
 
 - (void) addNewOrder {
-    if (self.activeOrders.count < self.maxOrders) {
+    NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
+    if (self.activeOrders.count < (unsigned long)self.maxOrders) {
         SKAction *delay = [SKAction waitForDuration:self.delay];
         SKAction *order = [SKAction runBlock:^{
             [self randomOrder];
@@ -275,6 +278,10 @@ const NSInteger STRIKES_NUM = 4;
     }
     
     [self addChild:order];
+    
+    NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
+    NSLog(@"new order");
+    NSLog(@"active orders %lu", (unsigned long)self.activeOrders.count);
 }
 
 - (void) createBarItems
@@ -384,6 +391,10 @@ const NSInteger STRIKES_NUM = 4;
         [self checkVelocity];
     }
     
+    if (self.activeOrders.count < self.maxOrders) {
+        [self addNewOrder];
+    }
+    
     if ([self childNodeWithName:@"drink"].position.x > self.size.width) {
         SKAction *glassBreakSound = [SKAction playSoundFileNamed:@"glassBreaking.wav" waitForCompletion:NO];
         [[self nodeAtPoint:CGPointMake(CGRectGetMaxX(self.view.frame), DRINK_Y)] removeFromParent];
@@ -491,9 +502,21 @@ const NSInteger STRIKES_NUM = 4;
 {
     CGFloat slideVelocity = (xVelocity * 5);
     [drink.physicsBody applyForce: CGVectorMake(slideVelocity, 0)];
-    drink.inMotion = YES;
-    drink.inQueue = NO;
-    self.drinkInQue = NO;
+    
+    // Toggling in motion
+    SKAction *delay = [SKAction waitForDuration:0.1];
+    SKAction *toggle = [SKAction runBlock:^{
+        drink.inMotion = !drink.inMotion;
+        drink.inQueue = NO;
+        self.drinkInQue = NO;
+    }];
+    SKAction *sequence = [SKAction sequence:@[delay, toggle]];
+    [self runAction:sequence];
+}
+
+- (void) toggleInMotionWithDrink:(DrinkNode *)drink
+{
+    drink.inMotion = !drink.inMotion;
 }
 
 -(void) checkVelocity
@@ -558,21 +581,19 @@ const NSInteger STRIKES_NUM = 4;
     SKAction *fadeBlock = [SKAction runBlock:^{
         [order runAction:fadeOut];
     }];
-    SKAction *delay = [SKAction waitForDuration:2.0];
     SKAction *newOrder = [SKAction runBlock:^{
-        [self newRandomPosition];
+        [self addNewOrder];
     }];
-    SKAction *sequence = [SKAction sequence:@[fadeBlock, delay, newOrder]];
-    
-    [self runAction:sequence];
-    
-    [drink runAction:fadeOut completion:^(void){
-        [drink removeFromParent];
-        [self.drinksInScene removeObject:drink];
+    SKAction *sequence = [SKAction sequence:@[fadeBlock, newOrder]];
+    SKAction *fadeDrink = [SKAction runBlock:^{
+        [drink runAction:fadeOut completion:^(void){
+            [drink removeFromParent];
+            [self.drinksInScene removeObject:drink];
+        }];
     }];
+    SKAction *group = [SKAction group:@[sequence, fadeDrink]];
     
-    [self performSelector:@selector(randomOrder) withObject:self afterDelay:2.0];
-    
+    [self runAction:group];
 }
 
 //////////////////////

@@ -17,6 +17,7 @@
         self.texture = [SKTexture textureWithImageNamed:item];
         _item = item;
         _inQueue = YES;
+        _inMotion = NO;
 //        self.physicsBody = [[SKPhysicsBody alloc]init];
 //        self.physicsBody.linearDamping = 1.0;
 //        self.physicsBody.dynamic = YES;
