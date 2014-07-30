@@ -27,6 +27,8 @@
 @property (nonatomic) NSTimeInterval gameTime;
 @property (nonatomic) NSTimeInterval lastAddedBubble;
 @property (nonatomic) NSTimeInterval deltaBubble;
+@property (nonatomic) NSTimeInterval orderLifetime;
+@property (nonatomic) NSTimeInterval currentTime;
 
 // Game Properties
 @property (nonatomic) BOOL gameOver;
@@ -36,6 +38,7 @@
 @property (strong, nonatomic) NSMutableArray *strikes;                                        // Number of Lives
 @property (strong, nonatomic) NSMutableArray *drinksInScene;
 @property (strong, nonatomic) NSMutableString *tappedItemName;
+@property (strong, nonatomic) NSMutableArray *activeOrders;
 @property (nonatomic) NSUInteger maxOrders;
 @property (nonatomic) NSTimeInterval delay;
 
@@ -110,6 +113,8 @@ const NSInteger STRIKES_NUM = 4;
         _drinkInQue = NO;
         _maxOrders = 3;
         _delay = 2;
+        _orderLifetime = 8;
+        _currentTime = 0;
         
         // Timer flag
         _startFlag = YES;
@@ -222,22 +227,26 @@ const NSInteger STRIKES_NUM = 4;
 #pragma mark - SCENE CONTENTS
 
 - (void) addDrinkWithName:(NSString *)name {
-    DrinkNode *drink = [[DrinkNode alloc]initWithImageNamed:name];
-    drink.position = CGPointMake(DRINK_X, DRINK_Y);
-    drink.anchorPoint = CGPointMake(0.5, 0.0);
-    drink.inQueue = YES;
-    drink.physicsBody = [[SKPhysicsBody alloc]init];
-    drink.physicsBody.linearDamping = 1.0;
-    drink.physicsBody.dynamic = YES;
-    drink.name = @"drink";
     
-    self.drinkInQue = YES;
-    
-    if ([drink isKindOfClass:[DrinkNode class]]) {
-        [self.drinksInScene addObject:drink];
+    if (self.activeOrders.count < self.maxOrders) {
+        DrinkNode *drink = [[DrinkNode alloc]initWithImageNamed:name];
+        drink.position = CGPointMake(DRINK_X, DRINK_Y);
+        drink.anchorPoint = CGPointMake(0.5, 0.0);
+        drink.inQueue = YES;
+        drink.physicsBody = [[SKPhysicsBody alloc]init];
+        drink.physicsBody.linearDamping = 1.0;
+        drink.physicsBody.dynamic = YES;
+        drink.name = @"drink";
+        
+        self.drinkInQue = YES;
+        
+        if ([drink isKindOfClass:[DrinkNode class]]) {
+            [self.drinksInScene addObject:drink];
+        }
+        
+        [self addChild:drink];
     }
     
-    [self addChild:drink];
 }
 
 - (void) addScoreLabel
@@ -267,21 +276,25 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) randomOrder
 {
-    CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
-    NSInteger randNum = arc4random() % 4;
     
-    SKSpriteNode *order = (SKSpriteNode *)[[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum]];
-    order.position = position;
-    
-    if ([order isKindOfClass:[Order class]]) {
-        [self.activeOrders addObject:order];
+    if (self.activeOrders.count < self.maxOrders) {
+        CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
+        NSInteger randNum = arc4random() % 4;
+        
+        Order *order = [[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum] CreationTime:self.currentTime ActiveTime:self.orderLifetime];
+        order.position = position;
+        
+        if ([order isKindOfClass:[Order class]]) {
+            [self.activeOrders addObject:order];
+        }
+        
+        [self addChild:order];
+        
+        NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
+        NSLog(@"new order");
+        NSLog(@"active orders %lu", (unsigned long)self.activeOrders.count);
     }
     
-    [self addChild:order];
-    
-    NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
-    NSLog(@"new order");
-    NSLog(@"active orders %lu", (unsigned long)self.activeOrders.count);
 }
 
 - (void) createBarItems
@@ -379,6 +392,9 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void)update:(NSTimeInterval)currentTime
 {
+    
+    self.currentTime = currentTime;
+    
     // Change pause label
     if (self.scene.paused == NO) {
         self.pauseButton.text = @"||";
@@ -393,6 +409,23 @@ const NSInteger STRIKES_NUM = 4;
     
     if (self.activeOrders.count < self.maxOrders) {
         [self addNewOrder];
+    }
+    
+    if (self.activeOrders.count != 0) {
+        NSMutableArray *toRemove = [NSMutableArray array];
+        for (Order *order in self.activeOrders) {
+            
+                if ((self.currentTime - order.becameActive) - order.remainActive <= 0) {
+                    [toRemove addObject:order];
+                    NSLog(@"active orders: %lu", (unsigned long)self.activeOrders.count);
+                }
+        }
+        
+        for (Order *order in self.activeOrders) {
+            [order removeFromParent];
+        }
+        
+        [self.activeOrders removeObjectsInArray:toRemove];
     }
     
     if ([self childNodeWithName:@"drink"].position.x > self.size.width) {
@@ -632,32 +665,33 @@ const NSInteger STRIKES_NUM = 4;
         pointsLabel.fontColor = [UIColor redColor];
     }
     
+// TODO: ADD SOUNDS
     // floating animation for label
-    SKAction *fade = [SKAction sequence:@[[SKAction fadeInWithDuration:0.5],
-                                          [SKAction fadeOutWithDuration:0.5]]];
+//    SKAction *fade = [SKAction sequence:@[[SKAction fadeInWithDuration:0.5],
+//                                          [SKAction fadeOutWithDuration:0.5]]];
     
     // Sound Effect
-    SKAction *pointsSound;
-    if (points > 0) {
-        pointsSound = [SKAction playSoundFileNamed:@"cashRegister.mp3" waitForCompletion:NO];
-    } else {
-        pointsSound = [SKAction playSoundFileNamed:@"oi.mp3" waitForCompletion:NO];
-    }
-
-    // move up by Y
-    SKAction *moveUp = [SKAction moveByX:0 y:10 duration:1.0];
-    
-    // adding to action group
-    SKAction *floatGroup = [SKAction group:@[moveUp, fade, pointsSound]];
-    
-    // add to scene
-    [self addChild:pointsLabel];
-    
-    // Running Action with completion block
-    [pointsLabel runAction:floatGroup completion:^(void){
-        // Removing node from screen upon completion
-        [pointsLabel removeFromParent];
-    }];
+//    SKAction *pointsSound;
+//    if (points > 0) {
+//        pointsSound = [SKAction playSoundFileNamed:@"cashRegister.mp3" waitForCompletion:NO];
+//    } else {
+//        pointsSound = [SKAction playSoundFileNamed:@"oi.mp3" waitForCompletion:NO];
+//    }
+//
+//    // move up by Y
+//    SKAction *moveUp = [SKAction moveByX:0 y:10 duration:1.0];
+//    
+//    // adding to action group
+//    SKAction *floatGroup = [SKAction group:@[moveUp, fade, pointsSound]];
+//    
+//    // add to scene
+//    [self addChild:pointsLabel];
+//    
+//    // Running Action with completion block
+//    [pointsLabel runAction:floatGroup completion:^(void){
+//        // Removing node from screen upon completion
+//        [pointsLabel removeFromParent];
+//    }];
     
 }
 

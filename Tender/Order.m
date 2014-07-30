@@ -10,12 +10,14 @@
 
 @implementation Order
 
-- (instancetype)initWithItemNamed:(NSString *)item {
-    
+-(instancetype)initWithItemNamed:(NSString *)item CreationTime: (NSTimeInterval)creation ActiveTime: (NSTimeInterval)active {
+
     self = [super init];
     
     if (self) {
         _item = item;
+        _becameActive = creation;
+        _remainActive = active;
         SKSpriteNode *bubble = [SKSpriteNode spriteNodeWithImageNamed:@"bubble.png"];
         _drink = [SKSpriteNode spriteNodeWithImageNamed:item];
         _drink.position = self.position;

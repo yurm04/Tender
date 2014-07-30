@@ -12,9 +12,9 @@
 
 @property (strong, nonatomic) NSString *item;
 @property (strong, nonatomic) SKSpriteNode *drink;
-@property (nonatomic) NSTimeInterval startTime;
-@property (nonatomic) NSTimeInterval lifeTime;
+@property (nonatomic) NSTimeInterval becameActive;
+@property (nonatomic) NSTimeInterval remainActive;
 
--(instancetype)initWithItemNamed:(NSString *)name;
+-(instancetype)initWithItemNamed:(NSString *)item CreationTime: (NSTimeInterval)creation ActiveTime: (NSTimeInterval)active;
 
 @end

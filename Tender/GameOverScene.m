@@ -24,7 +24,6 @@
         gameOverLabel.text = @"Game Over";
         gameOverLabel.fontSize = 50;
         gameOverLabel.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame)+ 50);
-        NSLog(@"%f,%f", gameOverLabel.position.x, gameOverLabel.position.y);
         gameOverLabel.fontColor = [SKColor whiteColor];
         
         SKLabelNode *scoreLabel = [[SKLabelNode alloc]initWithFontNamed:@"Futura-Medium"];
@@ -33,8 +32,6 @@
         scoreLabel.position = CGPointMake(284, 90);
         
         self.scoreString = [NSString stringWithFormat:@"%ld",(long)score];
-        NSLog(@"%ld", (long)score);
-        NSLog(@"%@", self.scoreString);
         
         SKLabelNode *homeButton = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
         homeButton.text = @"Home";

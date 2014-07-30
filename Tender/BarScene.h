@@ -18,8 +18,6 @@
 @property (strong, nonatomic) SKLabelNode *timer;
 @property (strong, nonatomic) SKLabelNode *pauseButton;
 
-@property (strong, nonatomic) NSMutableArray *activeOrders;
-
 @property (nonatomic) NSInteger gameScore;
 
 
