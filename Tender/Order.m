@@ -21,6 +21,7 @@
         SKSpriteNode *bubble = [SKSpriteNode spriteNodeWithImageNamed:@"bubble.png"];
         _drink = [SKSpriteNode spriteNodeWithImageNamed:item];
         _drink.position = self.position;
+        _timedOut = NO;
         [self addChild:bubble];
         [self addChild:_drink];
     }

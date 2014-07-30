@@ -48,11 +48,13 @@
 - (void) addNewOrder;
 - (void) randomOrder;
 
+- (void) removeActiveOrder: (Order *)order;
+- (void) removeDrink: (DrinkNode *)drink;
+
 - (void) checkVelocity;
 - (void) toggleInMotionWithDrink: (DrinkNode *)drink;
 - (void) checkForMatchWithDrink:(DrinkNode *)drink;
 - (void) slideDrink:(DrinkNode *)drink WithXVelocity:(CGFloat)xVelocity;
-- (void) removeActiveOrder: (Order *)order Drink: (DrinkNode *)drink;
 
 - (void) updateGameScoreWithPoints: (NSInteger)points;
 - (void) displayPointsEarnedForDrink: (DrinkNode *)drink WithPoints:(NSInteger)points;
@@ -69,7 +71,7 @@ const CGFloat BAR_ITEM_SCALE = 0.70;
 const CGFloat SCENE_SCALE = 0.50;
 const CGFloat STRIKE_SCALE = 0.25;
 const CGFloat BUBBLE_ITEM_SCALE = 0.30;
-
+const CGFloat ORDER_BUFFER = 25;
 
 const CGFloat MIN_VELOCITY = 1.0;
 
@@ -211,9 +213,24 @@ const NSInteger STRIKES_NUM = 4;
 
 - (CGFloat) newRandomPosition
 {
+    BOOL valid = YES;
+    
     _randomXPosition = (CGFloat)((arc4random() % (int)self.size.width) + RANDOM_BASE_POSITION);
     
     if (_randomXPosition > 500) {
+        _randomXPosition = [self newRandomPosition];
+    }
+    
+    for (Order *order in self.activeOrders) {
+        if (_randomXPosition < (order.position.x + ORDER_BUFFER) &&
+            _randomXPosition > (order.position.x - ORDER_BUFFER)) {
+            valid = YES;
+        } else {
+            valid = NO;
+        }
+    }
+    
+    if (!valid) {
         _randomXPosition = [self newRandomPosition];
     }
     
@@ -264,12 +281,17 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) addNewOrder {
     NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
-    if (self.activeOrders.count < (unsigned long)self.maxOrders) {
-        SKAction *delay = [SKAction waitForDuration:self.delay];
+    if (self.activeOrders.count < self.maxOrders) {
+        NSTimeInterval timeDelay = arc4random() % 5;
+        NSLog(@"time delay: %f", timeDelay);
+        SKAction *delayAction = [SKAction waitForDuration: timeDelay];
+        
         SKAction *order = [SKAction runBlock:^{
             [self randomOrder];
         }];
-        SKAction *sequence = [SKAction sequence:@[delay, order]];
+        
+        SKAction *sequence = [SKAction sequence:@[delayAction, order]];
+        
         [self runAction:sequence];
     }
 }
@@ -404,82 +426,96 @@ const NSInteger STRIKES_NUM = 4;
     
     // Call if isInMotion is true
     if (self.drinksInScene.count != 0) {
+        NSLog(@"checking velocity");
         [self checkVelocity];
     }
     
-    if (self.activeOrders.count < self.maxOrders) {
-        [self addNewOrder];
-    }
+//    if (self.activeOrders.count < self.maxOrders) {
+//        NSLog(@"new order");
+//        [self addNewOrder];
+//    }
     
+    // Check for timed out orders
     if (self.activeOrders.count != 0) {
         NSMutableArray *toRemove = [NSMutableArray array];
         for (Order *order in self.activeOrders) {
-            
-                if ((self.currentTime - order.becameActive) - order.remainActive <= 0) {
-                    [toRemove addObject:order];
-                    NSLog(@"active orders: %lu", (unsigned long)self.activeOrders.count);
-                }
+            if ((self.currentTime - order.becameActive) <= order.remainActive) {
+                [toRemove addObject:order];
+                [order removeFromParent];
+                NSLog(@"active orders: %lu", (unsigned long)self.activeOrders.count);
+            }
         }
         
-        for (Order *order in self.activeOrders) {
-            [order removeFromParent];
+        if (toRemove.count != 0) {
+            [self.activeOrders removeObjectsInArray:toRemove];
         }
         
-        [self.activeOrders removeObjectsInArray:toRemove];
     }
     
-    if ([self childNodeWithName:@"drink"].position.x > self.size.width) {
-        SKAction *glassBreakSound = [SKAction playSoundFileNamed:@"glassBreaking.wav" waitForCompletion:NO];
-        [[self nodeAtPoint:CGPointMake(CGRectGetMaxX(self.view.frame), DRINK_Y)] removeFromParent];
-        [self runAction:glassBreakSound];
-        [self removeStrike];
-    }
-    
-    // Updating timer
-    if (self.startFlag) {
-        self.startTime = currentTime;
-        self.startFlag = NO;
-    }
-    
-    // Checking for pause times
-    if (self.startPause) {
-        self.pauseStart = currentTime;
-        self.startPause = NO;
-    }
-    if (self.unpause) {
-        self.pauseEnd = currentTime;
-        self.unpause = NO;
-    }
-    
-    if (self.pauseEnd != 0) {
-        self.pausedTime += (self.pauseEnd - self.pauseStart);
-        self.pauseEnd = 0;
-    }
-    self.runningTime = (currentTime - self.startTime) - self.pausedTime;
-    
-    if (!self.gameOver && !self.scene.paused) {
-        if ([self updateTimerWithCurrentTime:currentTime]) {
-            [[self childNodeWithName:@"pauseButton"] removeFromParent];
-            [self endGame];
+    //  Check for drinks out of bounds
+    if (self.drinksInScene.count != 0) {
+        NSMutableArray *toRemove = [NSMutableArray array];
+        
+        for (DrinkNode *drink in self.drinksInScene) {
+            if (drink.position.x > self.size.width) {
+                [toRemove addObject:drink];
+                SKAction *glassBreakSound = [SKAction playSoundFileNamed:@"glassBreaking.wav" waitForCompletion:NO];
+                [drink removeFromParent];
+                [self runAction:glassBreakSound];
+                [self removeStrike];
+            }
+        }
+        if (toRemove.count != 0) {
+            [self.drinksInScene removeObjectsInArray:toRemove];
         }
     }
+    
+//    // Updating timer
+//    if (self.startFlag) {
+//        self.startTime = currentTime;
+//        self.startFlag = NO;
+//    }
+//    
+//    // Checking for pause times
+//    if (self.startPause) {
+//        self.pauseStart = currentTime;
+//        self.startPause = NO;
+//    }
+//    if (self.unpause) {
+//        self.pauseEnd = currentTime;
+//        self.unpause = NO;
+//    }
+//    
+//    if (self.pauseEnd != 0) {
+//        self.pausedTime += (self.pauseEnd - self.pauseStart);
+//        self.pauseEnd = 0;
+//    }
+//    self.runningTime = (currentTime - self.startTime) - self.pausedTime;
+//    
+//    if (!self.gameOver && !self.scene.paused) {
+//        if ([self updateTimerWithCurrentTime:currentTime]) {
+//            [[self childNodeWithName:@"pauseButton"] removeFromParent];
+//            //[self endGame];
+//            NSLog(@"Game Over");
+//        }
+//    }
 }
 
-- (BOOL) updateTimerWithCurrentTime: (NSTimeInterval)currentTime {
-    
-    NSDateFormatter *df = [[NSDateFormatter alloc]init];
-    [df setDateFormat:@"mm:ss"];
-    
-    
-    NSString *formattedTimer = [df stringFromDate:[NSDate dateWithTimeIntervalSinceReferenceDate:(self.gameTime - self.runningTime)]];
-    self.timer.text = [NSString stringWithFormat:@"%@", formattedTimer];
-    
-    if ([self.timer.text isEqualToString:@"00:00"] ) {
-        self.gameOver = YES;
-    }
-    
-    return self.gameOver;
-}
+//- (BOOL) updateTimerWithCurrentTime: (NSTimeInterval)currentTime {
+//    
+//    NSDateFormatter *df = [[NSDateFormatter alloc]init];
+//    [df setDateFormat:@"mm:ss"];
+//    
+//    
+//    NSString *formattedTimer = [df stringFromDate:[NSDate dateWithTimeIntervalSinceReferenceDate:(self.gameTime - self.runningTime)]];
+//    self.timer.text = [NSString stringWithFormat:@"%@", formattedTimer];
+//    
+//    if ([self.timer.text isEqualToString:@"00:00"] ) {
+//        self.gameOver = YES;
+//    }
+//    
+//    return self.gameOver;
+//}
 
 - (void) pauseGame {
     
@@ -596,37 +632,35 @@ const NSInteger STRIKES_NUM = 4;
             [self removeStrike];
         }
         
-        [self removeActiveOrder:order Drink:drink];
+        [self removeDrink:drink];
     }
     
     [self updateGameScoreWithPoints:earnedPoints];
     [self displayPointsEarnedForDrink:drink WithPoints:earnedPoints];
     
     if (self.strikes.count == 0) {
-        [self endGame];
+        //[self endGame];
+        NSLog(@"Game Over");
     }
 
 }
 
-- (void) removeActiveOrder: (Order *)order Drink: (DrinkNode *)drink{
-    
+- (void) removeActiveOrder: (Order *)order {
     SKAction *fadeOut = [SKAction fadeOutWithDuration:1];
-    SKAction *fadeBlock = [SKAction runBlock:^{
-        [order runAction:fadeOut];
-    }];
-    SKAction *newOrder = [SKAction runBlock:^{
-        [self addNewOrder];
-    }];
-    SKAction *sequence = [SKAction sequence:@[fadeBlock, newOrder]];
-    SKAction *fadeDrink = [SKAction runBlock:^{
-        [drink runAction:fadeOut completion:^(void){
-            [drink removeFromParent];
-            [self.drinksInScene removeObject:drink];
-        }];
-    }];
-    SKAction *group = [SKAction group:@[sequence, fadeDrink]];
     
-    [self runAction:group];
+    [order runAction:fadeOut completion:^{
+        [order removeFromParent];
+        [self.activeOrders removeObject:order];
+    }];
+}
+
+- (void) removeDrink: (DrinkNode *)drink {
+    SKAction *fadeOut = [SKAction fadeOutWithDuration:1];
+    
+    [drink runAction:fadeOut completion:^{
+        [drink removeFromParent];
+        [self.drinksInScene removeObject:drink];
+    }];
 }
 
 //////////////////////

@@ -12,6 +12,7 @@
 
 @property (nonatomic) BOOL inMotion;
 @property (nonatomic) BOOL inQueue;
+@property (nonatomic) BOOL outOfBounds;
 @property (strong, nonatomic) NSString *item;
 
 -(instancetype) initWithItemNamed:(NSString *)item;

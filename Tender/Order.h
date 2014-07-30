@@ -14,6 +14,7 @@
 @property (strong, nonatomic) SKSpriteNode *drink;
 @property (nonatomic) NSTimeInterval becameActive;
 @property (nonatomic) NSTimeInterval remainActive;
+@property (nonatomic) BOOL timedOut;
 
 -(instancetype)initWithItemNamed:(NSString *)item CreationTime: (NSTimeInterval)creation ActiveTime: (NSTimeInterval)active;
 
