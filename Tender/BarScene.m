@@ -75,7 +75,7 @@ const CGFloat BAR_ITEM_SCALE = 0.70;
 const CGFloat SCENE_SCALE = 0.50;
 const CGFloat STRIKE_SCALE = 0.25;
 const CGFloat BUBBLE_ITEM_SCALE = 0.30;
-const CGFloat ORDER_BUFFER = 300;
+const CGFloat ORDER_BUFFER = 100;
 
 const CGFloat MIN_VELOCITY = 1.0;
 
@@ -238,19 +238,7 @@ const NSInteger STRIKES_NUM = 4;
         _randomXPosition = [self newRandomPosition];
     }
     
-//    for (Order *order in self.activeOrders) {
-//        if (_randomXPosition < (order.position.x - ORDER_BUFFER) ||
-//            _randomXPosition > (order.position.x + ORDER_BUFFER)) {
-//            valid = YES;
-//        } else {
-//            valid = NO;
-//        }
-//    }
-//    
-//    if (!valid) {
-//        _randomXPosition = [self newRandomPosition];
-//    }
-    
+    NSLog(@"random positions %f", _randomXPosition);
     return _randomXPosition;
 }
 
@@ -312,11 +300,34 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) randomOrder
 {
-    CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
+    BOOL valid = NO;
+    CGFloat position = 0.0;
+    
+    if (self.activeOrders == 0) {
+        position = [self newRandomPosition];
+    } else {
+        position = [self newRandomPosition];
+        
+        do {
+            for (Order *order in self.activeOrders) {
+                if (position < (order.position.x - ORDER_BUFFER) ||
+                    position > (order.position.x + ORDER_BUFFER)) {
+                    valid = YES;
+                    NSLog(@"valid");
+                } else {
+                    valid = NO;
+                    NSLog(@"invalid");
+                }
+            }
+        } while (valid == NO);
+        
+    }
+    
+
     NSInteger randNum = arc4random() % 4;
     
     Order *order = [[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum] CreationTime:self.currentTime ActiveTime:self.orderLifetime];
-    order.position = position;
+    order.position = CGPointMake(position, BUBBLE_Y);
     
     if ([order isKindOfClass:[Order class]]) {
         [self.activeOrders addObject:order];
@@ -426,7 +437,6 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void)update:(NSTimeInterval)currentTime
 {
-    NSLog(@"%lu active orders, %lu max orders", (unsigned long)self.activeOrders.count, (unsigned long)self.maxOrders);
     self.currentTime = currentTime;
     
     // Change pause label
