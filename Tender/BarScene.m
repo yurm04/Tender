@@ -33,6 +33,8 @@
 // Game Properties
 @property (nonatomic) BOOL gameOver;
 @property (nonatomic) BOOL drinkInQue;
+@property (nonatomic) BOOL ordersMaxedOut;
+@property (nonatomic) BOOL activeOrder;
 
 @property (nonatomic) CGFloat randomXPosition;
 @property (strong, nonatomic) NSMutableArray *strikes;                                        // Number of Lives
@@ -40,6 +42,7 @@
 @property (strong, nonatomic) NSMutableString *tappedItemName;
 @property (strong, nonatomic) NSMutableArray *activeOrders;
 @property (nonatomic) NSUInteger maxOrders;
+@property (nonatomic) NSInteger numOrders;
 @property (nonatomic) NSTimeInterval delay;
 
 // Private Methods
@@ -47,6 +50,7 @@
 - (void) createBarItems;
 - (void) addNewOrder;
 - (void) randomOrder;
+- (void) checkOrders;
 
 - (void) removeActiveOrder: (Order *)order;
 - (void) removeDrink: (DrinkNode *)drink;
@@ -71,7 +75,7 @@ const CGFloat BAR_ITEM_SCALE = 0.70;
 const CGFloat SCENE_SCALE = 0.50;
 const CGFloat STRIKE_SCALE = 0.25;
 const CGFloat BUBBLE_ITEM_SCALE = 0.30;
-const CGFloat ORDER_BUFFER = 25;
+const CGFloat ORDER_BUFFER = 300;
 
 const CGFloat MIN_VELOCITY = 1.0;
 
@@ -114,7 +118,7 @@ const NSInteger STRIKES_NUM = 4;
         _gameScore = 0;
         _drinkInQue = NO;
         _maxOrders = 3;
-        _delay = 2;
+        _delay = 10;
         _orderLifetime = 8;
         _currentTime = 0;
         
@@ -122,6 +126,8 @@ const NSInteger STRIKES_NUM = 4;
         _startFlag = YES;
         _pausedTime = 0;
         _gameTime = 120;
+        _ordersMaxedOut = NO;
+        _numOrders = 0;
         
         // Configuring physics world with no gravity
         self.physicsWorld.gravity = CGVectorMake(0, 0);
@@ -182,7 +188,20 @@ const NSInteger STRIKES_NUM = 4;
     [self addChild:quitNode];
     [self addChild:self.pauseButton];
     
-    [self randomOrder];
+    // Orders
+    SKAction *generateOrders = [SKAction runBlock:^{
+        [self checkOrders];
+    }];
+    
+    SKAction *delay = [SKAction waitForDuration:2];
+    
+    SKAction *orderSequence = [SKAction sequence:@[delay, generateOrders]];
+    
+    SKAction *repeat = [SKAction repeatActionForever:orderSequence];
+    
+    [self runAction:repeat];
+    
+    
 }
 
 - (NSMutableArray *)activeOrders {
@@ -213,26 +232,24 @@ const NSInteger STRIKES_NUM = 4;
 
 - (CGFloat) newRandomPosition
 {
-    BOOL valid = YES;
-    
     _randomXPosition = (CGFloat)((arc4random() % (int)self.size.width) + RANDOM_BASE_POSITION);
     
     if (_randomXPosition > 500) {
         _randomXPosition = [self newRandomPosition];
     }
     
-    for (Order *order in self.activeOrders) {
-        if (_randomXPosition < (order.position.x + ORDER_BUFFER) &&
-            _randomXPosition > (order.position.x - ORDER_BUFFER)) {
-            valid = YES;
-        } else {
-            valid = NO;
-        }
-    }
-    
-    if (!valid) {
-        _randomXPosition = [self newRandomPosition];
-    }
+//    for (Order *order in self.activeOrders) {
+//        if (_randomXPosition < (order.position.x - ORDER_BUFFER) ||
+//            _randomXPosition > (order.position.x + ORDER_BUFFER)) {
+//            valid = YES;
+//        } else {
+//            valid = NO;
+//        }
+//    }
+//    
+//    if (!valid) {
+//        _randomXPosition = [self newRandomPosition];
+//    }
     
     return _randomXPosition;
 }
@@ -245,24 +262,22 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) addDrinkWithName:(NSString *)name {
     
-    if (self.activeOrders.count < self.maxOrders) {
-        DrinkNode *drink = [[DrinkNode alloc]initWithImageNamed:name];
-        drink.position = CGPointMake(DRINK_X, DRINK_Y);
-        drink.anchorPoint = CGPointMake(0.5, 0.0);
-        drink.inQueue = YES;
-        drink.physicsBody = [[SKPhysicsBody alloc]init];
-        drink.physicsBody.linearDamping = 1.0;
-        drink.physicsBody.dynamic = YES;
-        drink.name = @"drink";
-        
-        self.drinkInQue = YES;
-        
-        if ([drink isKindOfClass:[DrinkNode class]]) {
-            [self.drinksInScene addObject:drink];
-        }
-        
-        [self addChild:drink];
+    DrinkNode *drink = [[DrinkNode alloc]initWithImageNamed:name];
+    drink.position = CGPointMake(DRINK_X, DRINK_Y);
+    drink.anchorPoint = CGPointMake(0.5, 0.0);
+    drink.inQueue = YES;
+    drink.physicsBody = [[SKPhysicsBody alloc]init];
+    drink.physicsBody.linearDamping = 1.0;
+    drink.physicsBody.dynamic = YES;
+    drink.name = @"drink";
+    
+    self.drinkInQue = YES;
+    
+    if ([drink isKindOfClass:[DrinkNode class]]) {
+        [self.drinksInScene addObject:drink];
     }
+    
+    [self addChild:drink];
     
 }
 
@@ -280,42 +295,39 @@ const NSInteger STRIKES_NUM = 4;
 }
 
 - (void) addNewOrder {
-    NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
-    if (self.activeOrders.count < self.maxOrders) {
-        NSTimeInterval timeDelay = arc4random() % 5;
-        NSLog(@"time delay: %f", timeDelay);
-        SKAction *delayAction = [SKAction waitForDuration: timeDelay];
-        
-        SKAction *order = [SKAction runBlock:^{
-            [self randomOrder];
-        }];
-        
-        SKAction *sequence = [SKAction sequence:@[delayAction, order]];
-        
-        [self runAction:sequence];
-    }
+    
+    NSTimeInterval timeDelay = arc4random() % 5;
+    SKAction *delayAction = [SKAction waitForDuration: timeDelay];
+    
+    SKAction *order = [SKAction runBlock:^{
+        [self randomOrder];
+    }];
+    
+    SKAction *sequence = [SKAction sequence:@[delayAction, order]];
+    
+    [self runAction:sequence];
+    
+    self.numOrders++;
 }
 
 - (void) randomOrder
 {
+    CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
+    NSInteger randNum = arc4random() % 4;
     
-    if (self.activeOrders.count < self.maxOrders) {
-        CGPoint position = CGPointMake([self newRandomPosition], BUBBLE_Y);
-        NSInteger randNum = arc4random() % 4;
-        
-        Order *order = [[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum] CreationTime:self.currentTime ActiveTime:self.orderLifetime];
-        order.position = position;
-        
-        if ([order isKindOfClass:[Order class]]) {
-            [self.activeOrders addObject:order];
-        }
-        
-        [self addChild:order];
-        
-        NSLog(@"max orders %lu", (unsigned long)self.maxOrders);
-        NSLog(@"new order");
-        NSLog(@"active orders %lu", (unsigned long)self.activeOrders.count);
+    Order *order = [[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum] CreationTime:self.currentTime ActiveTime:self.orderLifetime];
+    order.position = position;
+    
+    if ([order isKindOfClass:[Order class]]) {
+        [self.activeOrders addObject:order];
     }
+    
+    [order setScale:0.0];
+    
+    [self addChild:order];
+    
+    SKAction *appear = [SKAction scaleTo:1.0 duration:0.1];
+    [order runAction:appear];
     
 }
 
@@ -414,7 +426,7 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void)update:(NSTimeInterval)currentTime
 {
-    
+    NSLog(@"%lu active orders, %lu max orders", (unsigned long)self.activeOrders.count, (unsigned long)self.maxOrders);
     self.currentTime = currentTime;
     
     // Change pause label
@@ -426,30 +438,7 @@ const NSInteger STRIKES_NUM = 4;
     
     // Call if isInMotion is true
     if (self.drinksInScene.count != 0) {
-        NSLog(@"checking velocity");
         [self checkVelocity];
-    }
-    
-//    if (self.activeOrders.count < self.maxOrders) {
-//        NSLog(@"new order");
-//        [self addNewOrder];
-//    }
-    
-    // Check for timed out orders
-    if (self.activeOrders.count != 0) {
-        NSMutableArray *toRemove = [NSMutableArray array];
-        for (Order *order in self.activeOrders) {
-            if ((self.currentTime - order.becameActive) <= order.remainActive) {
-                [toRemove addObject:order];
-                [order removeFromParent];
-                NSLog(@"active orders: %lu", (unsigned long)self.activeOrders.count);
-            }
-        }
-        
-        if (toRemove.count != 0) {
-            [self.activeOrders removeObjectsInArray:toRemove];
-        }
-        
     }
     
     //  Check for drinks out of bounds
@@ -516,6 +505,31 @@ const NSInteger STRIKES_NUM = 4;
 //    
 //    return self.gameOver;
 //}
+
+- (void) checkOrders {
+
+    if (self.activeOrders.count < self.maxOrders) {
+        [self addNewOrder];
+    }
+    
+    // Check for timed out orders
+        if (self.activeOrders.count != 0) {
+            NSMutableArray *toRemove = [NSMutableArray array];
+            for (Order *order in self.activeOrders) {
+                if ((self.currentTime - order.becameActive) >= order.remainActive) {
+                    [toRemove addObject:order];
+                    //[self removeActiveOrder:order];
+                    SKAction *disappear = [SKAction scaleTo:0.0 duration:0.1];
+                    [order runAction:disappear];
+                }
+            }
+    
+            if (toRemove.count != 0) {
+                [self.activeOrders removeObjectsInArray:toRemove];
+           }
+    
+        }
+}
 
 - (void) pauseGame {
     
@@ -648,19 +662,19 @@ const NSInteger STRIKES_NUM = 4;
 - (void) removeActiveOrder: (Order *)order {
     SKAction *fadeOut = [SKAction fadeOutWithDuration:1];
     
-    [order runAction:fadeOut completion:^{
-        [order removeFromParent];
-        [self.activeOrders removeObject:order];
-    }];
+    [order runAction:fadeOut];
+    
 }
 
 - (void) removeDrink: (DrinkNode *)drink {
-    SKAction *fadeOut = [SKAction fadeOutWithDuration:1];
+    SKAction *disappear = [SKAction scaleTo:0.0 duration:0.1];
     
-    [drink runAction:fadeOut completion:^{
+    SKAction *remove = [SKAction runBlock:^{
         [drink removeFromParent];
         [self.drinksInScene removeObject:drink];
     }];
+    SKAction *sequence = [SKAction sequence:@[disappear, remove]];
+    [drink runAction:sequence];
 }
 
 //////////////////////
