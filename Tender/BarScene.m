@@ -75,7 +75,7 @@ const CGFloat BAR_ITEM_SCALE = 0.70;
 const CGFloat SCENE_SCALE = 0.50;
 const CGFloat STRIKE_SCALE = 0.25;
 const CGFloat BUBBLE_ITEM_SCALE = 0.30;
-const CGFloat ORDER_BUFFER = 100;
+const CGFloat ORDER_BUFFER = 30;
 
 const CGFloat MIN_VELOCITY = 1.0;
 
@@ -300,7 +300,7 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) randomOrder
 {
-    BOOL valid = NO;
+    BOOL valid = YES;
     CGFloat position = 0.0;
     
     if (self.activeOrders == 0) {
