@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Yuraima Estevez. All rights reserved.
 //
 
-#import <UIKit/UIKit.h>
 #import <sqlite3.h>
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
@@ -16,8 +15,9 @@
 // Database Stuff
 @property (nonatomic) sqlite3 *tenderDB;
 @property (strong, nonatomic) NSString *databasePath;
-@property (strong, nonatomic) AppDelegate *dbHandler;
 
+
++ (AppDelegate *)sharedDelegate;
 - (BOOL) insertName: (NSString *)name Score: (NSString *)score;
 - (NSString *) getHighScoreWithName: (NSString *) name;
 @end

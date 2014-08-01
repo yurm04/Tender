@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Yuraima Estevez. All rights reserved.
 //
 
-#import <SpriteKit/SpriteKit.h>
 #import "GameOverScene.h"
 
 @interface BarScene : SKScene
@@ -16,6 +15,5 @@
 @property (strong, nonatomic) SKLabelNode *timer;
 @property (strong, nonatomic) SKLabelNode *pauseButton;
 @property (nonatomic) NSInteger gameScore;
-
 
 @end

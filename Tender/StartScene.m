@@ -10,12 +10,18 @@
 
 @implementation StartScene
 
--(id)initWithSize:(CGSize)size {    
-    if (self = [super initWithSize:size]) {
+-(instancetype)initWithSize:(CGSize)size
+{
+    self = [super initWithSize:size];
+    
+    if (self) {
         /* Setup your scene here */
         
         // Setting background color
-        self.backgroundColor = [SKColor colorWithRed:138/255.0f green:181/255.0f blue:189/255.0f alpha:1.0];
+        self.backgroundColor = [SKColor colorWithRed:138/255.0f
+                                               green:181/255.0f
+                                                blue:189/255.0f
+                                               alpha:1.0];
         
         // Title Label
         SKLabelNode *titleNode =[SKLabelNode labelNodeWithFontNamed:@"Half Bold Pixel-7"];
@@ -50,13 +56,14 @@
     return self;
 }
 
-- (void)didMoveToView:(SKView *)view {
-    
-    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
-    [[self view] addGestureRecognizer:tapRecognizer];
+- (void)didMoveToView:(SKView *)view
+{
+    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                    action:@selector(handleTap:)];
+    [self.view addGestureRecognizer:tapRecognizer];
 }
 
-- (void) handleTap: (UITapGestureRecognizer *) recognizer {
+- (void)handleTap:(UITapGestureRecognizer *)recognizer {
     
     if (recognizer.state == UIGestureRecognizerStateEnded)
     {
@@ -64,7 +71,8 @@
         CGPoint touchLocation = [recognizer locationInView:recognizer.view];
         touchLocation = [self convertPointFromView:touchLocation];
         
-        if ((touchLocation.x >= 0 && touchLocation.x <= 100) && (touchLocation.y >= 0 && touchLocation.y <= 50)) {
+        if ((touchLocation.x >= 0 && touchLocation.x <= 100)
+            && (touchLocation.y >= 0 && touchLocation.y <= 50)) {
             [self help];
         } else {
             [self startGame];
@@ -72,15 +80,15 @@
     }
 }
 
-- (void) help {
+- (void)help {
     SKScene *helpScene = [[HelpScene alloc]initWithSize:self.size];
-    
     SKTransition *slideUp = [SKTransition moveInWithDirection:SKTransitionDirectionUp duration:1];
     
-    [self.view presentScene:helpScene transition:slideUp];
+    [self.view presentScene:helpScene
+                 transition:slideUp];
 }
 
-- (void) startGame {    
+- (void)startGame {
     
     SKScene *barScene = [[BarScene alloc]initWithSize:self.size];
     

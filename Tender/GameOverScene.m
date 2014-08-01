@@ -6,54 +6,57 @@
 //  Copyright (c) 2014 Yuraima Estevez. All rights reserved.
 //
 
+#import "AppDelegate.h"
 #import "GameOverScene.h"
 
+@interface GameOverScene()
+
+@property (nonatomic) NSInteger gameScore;
+
+@end
 
 @implementation GameOverScene
-{
-    NSInteger gameScore;
-}
 
--(id)initWithSize: (CGSize)size Score:(NSInteger)score
+- (instancetype)initWithSize:(CGSize)size andScore:(NSInteger)score
 {
-    if (self = [super initWithSize:size])
-    {
-        self.backgroundColor = [SKColor colorWithRed:138/255.0f green:181/255.0f blue:189/255.0f alpha:1.0];
-        SKLabelNode *gameOverLabel = [[SKLabelNode alloc]initWithFontNamed:@"Futura-Medium"];
-        gameOverLabel.name = @"gameOverLabel";
-        gameOverLabel.text = @"Game Over";
-        gameOverLabel.fontSize = 50;
-        gameOverLabel.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame)+ 50);
-        NSLog(@"%f,%f", gameOverLabel.position.x, gameOverLabel.position.y);
-        gameOverLabel.fontColor = [SKColor whiteColor];
-        
-        SKLabelNode *scoreLabel = [[SKLabelNode alloc]initWithFontNamed:@"Futura-Medium"];
-        scoreLabel.text = [NSString stringWithFormat:@"$%ld",(long)score];
-        scoreLabel.fontSize = 35;
-        scoreLabel.position = CGPointMake(284, 90);
-        
-        self.scoreString = [NSString stringWithFormat:@"%ld",(long)score];
-        NSLog(@"%ld", (long)score);
-        NSLog(@"%@", self.scoreString);
-        
-        SKLabelNode *homeButton = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
-        homeButton.text = @"Home";
-        homeButton.fontSize = 15;
-        homeButton.position = CGPointMake(30, 30);
-        
-        SKLabelNode *newGame = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
-        newGame.text = @"New Game";
-        newGame.fontSize = 15;
-        newGame.position = CGPointMake(500, 30);
-        
-        [self addChild:gameOverLabel];
-        [self addChild:scoreLabel];
-        [self addChild:homeButton];
-        [self addChild:newGame];
-        
-        gameScore = score;
-        self.dbHandler = [[AppDelegate alloc]init];
-    }
+    self.backgroundColor = [SKColor colorWithRed:138/255.0f
+                                           green:181/255.0f
+                                            blue:189/255.0f
+                                           alpha:1.0];
+    
+    SKLabelNode *gameOverLabel = [[SKLabelNode alloc]initWithFontNamed:@"Futura-Medium"];
+    gameOverLabel.name = @"gameOverLabel";
+    gameOverLabel.text = @"Game Over";
+    gameOverLabel.fontSize = 50;
+    gameOverLabel.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame)+ 50);
+    NSLog(@"%f,%f", gameOverLabel.position.x, gameOverLabel.position.y);
+    gameOverLabel.fontColor = [SKColor whiteColor];
+    
+    SKLabelNode *scoreLabel = [[SKLabelNode alloc]initWithFontNamed:@"Futura-Medium"];
+    scoreLabel.text = [NSString stringWithFormat:@"$%ld",(long)score];
+    scoreLabel.fontSize = 35;
+    scoreLabel.position = CGPointMake(284, 90);
+    
+    self.scoreString = [NSString stringWithFormat:@"%ld",(long)score];
+    NSLog(@"%ld", (long)score);
+    NSLog(@"%@", self.scoreString);
+    
+    SKLabelNode *homeButton = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
+    homeButton.text = @"Home";
+    homeButton.fontSize = 15;
+    homeButton.position = CGPointMake(30, 30);
+    
+    SKLabelNode *newGame = [[SKLabelNode alloc]initWithFontNamed:@"Half Bold Pixel-7"];
+    newGame.text = @"New Game";
+    newGame.fontSize = 15;
+    newGame.position = CGPointMake(500, 30);
+    
+    [self addChild:gameOverLabel];
+    [self addChild:scoreLabel];
+    [self addChild:homeButton];
+    [self addChild:newGame];
+    
+    self.gameScore = score;
     return self;
 }
 
@@ -71,52 +74,56 @@
     
     [self.view addSubview:self.nameField];
     
-    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(handleTap:)];
-    [[self view] addGestureRecognizer:tapRecognizer];
+    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc]initWithTarget:self
+                                                                                   action:@selector(handleTap:)];
+    [self.view addGestureRecognizer:tapRecognizer];
 }
 
-- (void) handleTap: (UIGestureRecognizer *) recognizer {
-    
+- (void)handleTap:(UIGestureRecognizer *)recognizer
+{
     CGPoint touchLocation = [recognizer locationInView:recognizer.view];
     touchLocation = [self convertPointFromView:touchLocation];
     
-    if ((touchLocation.x >= 0 && touchLocation.x <= 30) && (touchLocation.y >= 0 && touchLocation.y <= 30)) {
+    if ((touchLocation.x >= 0 && touchLocation.x <= 30)
+        && (touchLocation.y >= 0 && touchLocation.y <= 30)) {
         [self backToMenu];
-    } else if ((touchLocation.x >= 450 && touchLocation.x <= 500) && (touchLocation.y >= 0 && touchLocation.y <= 30)) {
+    } else if ((touchLocation.x >= 450 && touchLocation.x <= 500)
+               && (touchLocation.y >= 0 && touchLocation.y <= 30)) {
         [self newGame];
     }
     
 }
 
-- (BOOL)textFieldShouldReturn:(UITextField *)textField {
-    
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
 	[textField resignFirstResponder];
     if (self.nameField.text != nil) {
         [self recordScore];
         [self displayHighScore];
     }
-
+    
 	return YES;
 }
 
 - (void) recordScore
 {
-    [self.dbHandler insertName:self.nameField.text Score:self.scoreString];
+    [[AppDelegate sharedDelegate] insertName:self.nameField.text
+                                       Score:self.scoreString];
 }
 
 - (void) displayHighScore
 {
-    NSString *gamerScore = [self.dbHandler getHighScoreWithName:self.nameField.text];
+    NSString *gamerScore = [[AppDelegate sharedDelegate] getHighScoreWithName:self.nameField.text];
     SKLabelNode *scoreLabel = [[SKLabelNode alloc]initWithFontNamed:@"Futura-Medium"];
     scoreLabel.fontSize = 25;
     scoreLabel.position = CGPointMake(284, 60);
-    if (!gameScore) {
+    if (!self.gameScore) {
         scoreLabel.text = [NSString stringWithFormat:@"No Score to beat yet!"];
     }
-    else if (gameScore <= [gamerScore intValue]) {
-        scoreLabel.text = [NSString stringWithFormat:@"Your Best Score:  $%@",gamerScore];
-    } else if (gameScore >= [gamerScore intValue]){
-        scoreLabel.text = [NSString stringWithFormat:@"Your Best Score:  $%ld",(long)gameScore];
+    else if (self.gameScore <= [gamerScore intValue]) {
+        scoreLabel.text = [NSString stringWithFormat:@"Your Best Score:  $%@", gamerScore];
+    } else if (self.gameScore >= [gamerScore intValue]){
+        scoreLabel.text = [NSString stringWithFormat:@"Your Best Score:  $%ld", (long)self.gameScore];
     }
     
     [self addChild:scoreLabel];
@@ -127,16 +134,19 @@
 {
     SKScene *newGame = [[BarScene alloc]initWithSize:self.size];
     
-    [self.view presentScene:newGame transition:[SKTransition doorsOpenHorizontalWithDuration:2.0]];
+    [self.view presentScene:newGame
+                 transition:[SKTransition doorsOpenHorizontalWithDuration:2.0]];
     [self.nameField removeFromSuperview];
-
+    
 }
 
 - (void) backToMenu {
     SKScene *startScene = [[StartScene alloc]initWithSize:self.size];
     
-    SKTransition *slideDown = [SKTransition moveInWithDirection:SKTransitionDirectionDown duration:1];
+    SKTransition *slideDown = [SKTransition moveInWithDirection:SKTransitionDirectionDown
+                                                       duration:1];
     [self.nameField removeFromSuperview];
-    [self.view presentScene:startScene transition:slideDown];
+    [self.view presentScene:startScene
+                 transition:slideDown];
 }
 @end
