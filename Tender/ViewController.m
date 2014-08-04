@@ -11,19 +11,17 @@
 
 @implementation ViewController
 
-- (void)viewWillLayoutSubviews
-{
+- (void)viewWillLayoutSubviews{
     [super viewWillLayoutSubviews];
     
     SKView * skView = (SKView *)self.view;
     
     if (!skView.scene) {
-    #ifdef DEBUG
-        skView.showsFPS = YES;
-        skView.showsNodeCount = YES;
-    #endif
+        skView.showsFPS = NO;
+        skView.showsNodeCount = NO;
+        
         // Create and configure the scene.
-        SKScene *scene = [StartScene sceneWithSize:skView.bounds.size];
+        SKScene * scene = [StartScene sceneWithSize:skView.bounds.size];
         scene.scaleMode = SKSceneScaleModeAspectFill;
         
         // Present the scene.

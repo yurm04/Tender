@@ -6,16 +6,18 @@
 //  Copyright (c) 2014 Yuraima Estevez. All rights reserved.
 //
 
-@import SpriteKit;
+#import <SpriteKit/SpriteKit.h>
+#import "AppDelegate.h"
 #import "StartScene.h"
 
 @interface GameOverScene : SKScene <UITextFieldDelegate>
 
 @property (strong, nonatomic) UITextField *nameField;
-@property (strong, nonatomic) NSString *scoreString;
+@property (strong, nonatomic) NSString* scoreString;
+@property (strong, nonatomic) AppDelegate *dbHandler;
 
-- (instancetype)initWithSize:(CGSize)size andScore:(NSInteger)score;
-- (void)displayHighScore;
-- (void)recordScore;
 
+-(id)initWithSize: (CGSize)size Score:(NSInteger)score;
+- (void) displayHighScore;
+- (void) recordScore;
 @end

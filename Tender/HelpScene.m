@@ -10,11 +10,11 @@
 
 @implementation HelpScene
 
-- (instancetype)initWithSize:(CGSize)size
-{
-    self = [super initWithSize:size];
+
+-(instancetype)initWithSize:(CGSize)size {
     
-    if (self) {
+    if (self = [super initWithSize:size]) {
+        
         self.screens = @[@"tut0.png", @"tut1.png", @"tut2.png"];
         self.currentScreen = 0;
         self.background = [[SKSpriteNode alloc]initWithImageNamed:self.screens[self.currentScreen]];
@@ -34,50 +34,43 @@
 
 - (void)didMoveToView:(SKView *)view
 {
-    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc]initWithTarget:self
-                                                                                   action:@selector(handleTap:)];
+    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(handleTap:)];
     [[self view] addGestureRecognizer:tapRecognizer];
     
-    UISwipeGestureRecognizer *left = [[UISwipeGestureRecognizer alloc]initWithTarget:self
-                                                                              action:@selector(swipeLeft)];
+    UISwipeGestureRecognizer *left = [[UISwipeGestureRecognizer alloc]initWithTarget:self action:@selector(swipeLeft)];
     left.direction = UISwipeGestureRecognizerDirectionLeft;
     [[self view] addGestureRecognizer:left];
     
-    UISwipeGestureRecognizer *right = [[UISwipeGestureRecognizer alloc]initWithTarget:self
-                                                                               action:@selector(swipeRight)];
+    UISwipeGestureRecognizer *right = [[UISwipeGestureRecognizer alloc]initWithTarget:self action:@selector(swipeRight)];
     right.direction = UISwipeGestureRecognizerDirectionRight;
-    [self.view addGestureRecognizer:right];
+    [[self view] addGestureRecognizer:right];
 }
 
-- (void)handleTap:(UITapGestureRecognizer *)recognizer
-{
+- (void) handleTap: (UITapGestureRecognizer *) recognizer {
     if (recognizer.state == UIGestureRecognizerStateEnded)
     {
         // Adding gesture recognizer to node at touch point
         CGPoint touchLocation = [recognizer locationInView:recognizer.view];
         touchLocation = [self convertPointFromView:touchLocation];
         
-        if ((touchLocation.x >= 0 && touchLocation.x <= 200)
-            && (touchLocation.y >= 0 && touchLocation.y <= 100)) {
+        if ((touchLocation.x >= 0 && touchLocation.x <= 200) && (touchLocation.y >= 0 && touchLocation.y <= 100)) {
             [self backToMenu];
         }
     }
 }
 
-- (void)swipeLeft
-{
+- (void) swipeLeft {
     NSLog(@"left");
     [self nextScreen];
 }
 
-- (void)swipeRight
-{
+- (void) swipeRight {
     NSLog(@"right");
     [self previousScreen];
 }
 
-- (void)nextScreen
-{
+- (void) nextScreen {
+    
     if (self.currentScreen < self.screens.count) {
         self.currentScreen += 1;
         NSLog(@"Screen %i", self.currentScreen);
@@ -85,8 +78,8 @@
     }
 }
 
-- (void)previousScreen
-{    
+- (void) previousScreen {
+    
     if (self.currentScreen != 0) {
         self.currentScreen -= 1;
         NSLog(@"Screen %i", self.currentScreen);
@@ -94,13 +87,12 @@
     }
 }
 
-- (void)backToMenu {
+- (void) backToMenu {
     SKScene *startScene = [[StartScene alloc]initWithSize:self.size];
-
+    
     SKTransition *slideDown = [SKTransition moveInWithDirection:SKTransitionDirectionDown duration:1];
     
-    [self.view presentScene:startScene
-                 transition:slideDown];
+    [self.view presentScene:startScene transition:slideDown];
 }
 
 

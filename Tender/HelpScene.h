@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Yuraima Estevez. All rights reserved.
 //
 
+#import <SpriteKit/SpriteKit.h>
+
 #import "StartScene.h"
 
 @interface HelpScene : SKScene
@@ -13,7 +15,7 @@
 @property (strong, nonatomic) SKLabelNode *backButton;
 @property (strong, nonatomic) SKSpriteNode *background;
 @property (strong, nonatomic) NSArray *screens;
-@property (nonatomic) int currentScreen;
+@property int currentScreen;
 
 
 @end
