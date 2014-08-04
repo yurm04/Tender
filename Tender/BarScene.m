@@ -71,38 +71,38 @@
 
 // CONSTANT VALUES
 
-const CGFloat BAR_ITEM_SCALE = 0.70;
-const CGFloat SCENE_SCALE = 0.50;
-const CGFloat STRIKE_SCALE = 0.25;
-const CGFloat BUBBLE_ITEM_SCALE = 0.30;
-const CGFloat ORDER_BUFFER = 30;
+static const CGFloat BAR_ITEM_SCALE = 0.70;
+static const CGFloat SCENE_SCALE = 0.50;
+static const CGFloat STRIKE_SCALE = 0.25;
+static const CGFloat BUBBLE_ITEM_SCALE = 0.30;
+static const CGFloat ORDER_BUFFER = 30;
 
-const CGFloat MIN_VELOCITY = 1.0;
+static const CGFloat MIN_VELOCITY = 1.0;
 
-const CGFloat DRINK_X = 50;
-const CGFloat DRINK_Y = 110;
-const CGFloat ANCHOR_X = 0.5;
-const CGFloat ANCHOR_Y = 0.0;
-const CGFloat BAR_BASE_Y = 12;
-const CGFloat BAR_BASE_X = 75;
-const CGFloat BUBBLE_Y = 260;
+static const CGFloat DRINK_X = 50;
+static const CGFloat DRINK_Y = 110;
+static const CGFloat ANCHOR_X = 0.5;
+static const CGFloat ANCHOR_Y = 0.0;
+static const CGFloat BAR_BASE_Y = 12;
+static const CGFloat BAR_BASE_X = 75;
+static const CGFloat BUBBLE_Y = 260;
 
-const NSInteger RANDOM_BASE_POSITION = 150;
-const NSInteger RANDOM_MAX_POSITION = 500;
-const CGFloat TIER_1_POSITION = 75;
-const CGFloat TIER_2_POSITION = 40;
-const CGFloat TIER_3_POSITION = 10;
-const CGFloat SCORE_X = 550;
-const CGFloat SCORE_Y = 30;
+static const NSInteger RANDOM_BASE_POSITION = 150;
+static const NSInteger RANDOM_MAX_POSITION = 500;
+static const CGFloat TIER_1_POSITION = 75;
+static const CGFloat TIER_2_POSITION = 40;
+static const CGFloat TIER_3_POSITION = 10;
+static const CGFloat SCORE_X = 550;
+static const CGFloat SCORE_Y = 30;
 
-const NSInteger ITEMS_COUNT = 4;
+static const NSInteger ITEMS_COUNT = 4;
 
-const CGFloat BAR_ITEM_SPACE = 100;
-const CGFloat BACKGROUND_OFFSET = 60;
-const CGFloat BAR_OFFSET = 100;
-const CGFloat ITEM_FOUR_OFFSET = 25;
+static const CGFloat BAR_ITEM_SPACE = 100;
+static const CGFloat BACKGROUND_OFFSET = 60;
+static const CGFloat BAR_OFFSET = 100;
+static const CGFloat ITEM_FOUR_OFFSET = 25;
 
-const NSInteger STRIKES_NUM = 4;
+static const NSInteger STRIKES_NUM = 4;
 
 ////////////////////
 // INITIALIZATION //
@@ -300,30 +300,8 @@ const NSInteger STRIKES_NUM = 4;
 
 - (void) randomOrder
 {
-    BOOL valid = YES;
-    CGFloat position = 0.0;
+    CGFloat position = [self newRandomPosition];
     
-    if (self.activeOrders == 0) {
-        position = [self newRandomPosition];
-    } else {
-        position = [self newRandomPosition];
-        
-        do {
-            for (Order *order in self.activeOrders) {
-                if (position < (order.position.x - ORDER_BUFFER) ||
-                    position > (order.position.x + ORDER_BUFFER)) {
-                    valid = YES;
-                    NSLog(@"valid");
-                } else {
-                    valid = NO;
-                    NSLog(@"invalid");
-                }
-            }
-        } while (valid == NO);
-        
-    }
-    
-
     NSInteger randNum = arc4random() % 4;
     
     Order *order = [[Order alloc]initWithItemNamed:[NSString stringWithFormat:@"orderItem%ld", (long)randNum] CreationTime:self.currentTime ActiveTime:self.orderLifetime];
