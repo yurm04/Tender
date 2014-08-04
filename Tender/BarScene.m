@@ -46,7 +46,7 @@
 @property (nonatomic) NSTimeInterval delay;
 
 // Private Methods
-- (CGFloat) newRandomPosition;
+- (CGFloat) newRandomPositionWithIndex: (NSUInteger)index;
 - (void) createBarItems;
 - (void) addNewOrder;
 - (void) randomOrder;
@@ -71,11 +71,9 @@
 
 // CONSTANT VALUES
 
-static const CGFloat BAR_ITEM_SCALE = 0.70;
-static const CGFloat SCENE_SCALE = 0.50;
 static const CGFloat STRIKE_SCALE = 0.25;
 static const CGFloat BUBBLE_ITEM_SCALE = 0.30;
-static const CGFloat ORDER_BUFFER = 30;
+static const CGFloat ORDER_BUFFER = 100;
 
 static const CGFloat MIN_VELOCITY = 1.0;
 
@@ -87,7 +85,7 @@ static const CGFloat BAR_BASE_Y = 12;
 static const CGFloat BAR_BASE_X = 75;
 static const CGFloat BUBBLE_Y = 260;
 
-static const NSInteger RANDOM_BASE_POSITION = 150;
+static const NSInteger RANDOM_BASE_POSITION = 100;
 static const NSInteger RANDOM_MAX_POSITION = 500;
 static const CGFloat TIER_1_POSITION = 75;
 static const CGFloat TIER_2_POSITION = 40;
@@ -117,7 +115,7 @@ static const NSInteger STRIKES_NUM = 4;
         // Initialize score with zero
         _gameScore = 0;
         _drinkInQue = NO;
-        _maxOrders = 3;
+        _maxOrders = 2;
         _delay = 10;
         _orderLifetime = 8;
         _currentTime = 0;
@@ -230,15 +228,32 @@ static const NSInteger STRIKES_NUM = 4;
 }
 
 
-- (CGFloat) newRandomPosition
+- (CGFloat) newRandomPositionWithIndex: (NSUInteger)index
 {
+    NSLog(@"Index %lu", (unsigned long)index);
     _randomXPosition = (CGFloat)((arc4random() % (int)self.size.width) + RANDOM_BASE_POSITION);
-    
-    if (_randomXPosition > 500) {
-        _randomXPosition = [self newRandomPosition];
+
+    if (_randomXPosition > RANDOM_MAX_POSITION) {
+        _randomXPosition = [self newRandomPositionWithIndex:0];
     }
     
-    NSLog(@"random positions %f", _randomXPosition);
+    if (self.activeOrders.count != 0) {
+        NSLog(@"For loop Index %lu", (unsigned long)index);
+        for (; index < self.activeOrders.count; index++) {
+            if ([[self.activeOrders objectAtIndex:index] isKindOfClass:[Order class]]) {
+                Order *order = [self.activeOrders objectAtIndex:index];
+                NSLog(@"random position %f, order position %f", _randomXPosition, order.position.x);
+                
+                if (_randomXPosition > (order.position.x - ORDER_BUFFER) &&
+                    _randomXPosition < (order.position.x + ORDER_BUFFER)) {
+                    NSLog(@"conflict");
+                    _randomXPosition = [self newRandomPositionWithIndex:index];
+                }
+            }
+        }
+    }
+    
+    
     return _randomXPosition;
 }
 
@@ -300,7 +315,7 @@ static const NSInteger STRIKES_NUM = 4;
 
 - (void) randomOrder
 {
-    CGFloat position = [self newRandomPosition];
+    CGFloat position = [self newRandomPositionWithIndex:0];
     
     NSInteger randNum = arc4random() % 4;
     
